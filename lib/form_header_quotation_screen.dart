@@ -30,18 +30,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   @override
   void initState() {
     super.initState();
-    final data =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    if (data != null) {
-      selectedCustomer = data['partner_id'];
-      selectedInvoiceAddress = data['partner_invoice_id'];
-      selectedDeliveryAddress = data['partner_shipping_id'];
-      selectedSalesperson = data['user_id'];
-      selectedPaymentTerm = data['payment_term_id'];
-      selectedWarehouse = data['warehouse_id'];
-    } else {
-      _loadData();
-    }
+    _loadData();
   }
 
   Future<void> _loadData() async {
@@ -88,6 +77,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
       final fetchedAddresses =
           await widget.odooService.fetchCustomerAddresses(customerId);
 
+      if (!mounted) return;
       setState(() {
         filteredInvoiceAddresses =
             fetchedAddresses.where((a) => a['type'] == 'invoice').toList();
@@ -112,6 +102,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
         selectedDeliveryAddress = filteredDeliveryAddresses.first;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading addresses: $e')),
       );

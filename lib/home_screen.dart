@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'odoo_service.dart';
 import 'product_detail_screen.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   final OdooService odooService;
@@ -24,6 +25,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _initializeProducts();
   }
+
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID', // Format Indonesia
+    symbol: 'Rp ', // Simbol Rupiah
+    decimalDigits: 2,
+  );
 
   Future<void> _initializeProducts() async {
     try {
@@ -121,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Rp.${product['list_price']}',
+                    currencyFormatter.format(product['list_price'] ?? 0),
                     style: const TextStyle(
                       color: Colors.green,
                       fontWeight: FontWeight.bold,

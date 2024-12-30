@@ -116,7 +116,8 @@ class OdooService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchProductsByCategory(String categoryId) async {
+  Future<List<Map<String, dynamic>>> fetchProductsByCategory(
+      String categoryId) async {
     await checkSession(); // Ensure session is valid
     try {
       final response = await _client.callKw({
@@ -139,7 +140,8 @@ class OdooService {
       });
 
       // Parse and format the products list
-      List<Map<String, dynamic>> products = List<Map<String, dynamic>>.from(response);
+      List<Map<String, dynamic>> products =
+          List<Map<String, dynamic>>.from(response);
       for (var product in products) {
         product['vendor_name'] = product['company_id'] != null &&
                 product['company_id'] is List &&
@@ -190,7 +192,9 @@ class OdooService {
         'args': [],
         'kwargs': {
           'fields': ['id', 'name'], // Fetch the ID and name of employees
-          'domain': [['active', '=', true]], // Optionally fetch only active employees
+          'domain': [
+            ['active', '=', true]
+          ], // Optionally fetch only active employees
         },
       });
       return List<Map<String, dynamic>>.from(response);
@@ -729,7 +733,9 @@ class OdooService {
         'method': 'search_read',
         'args': [],
         'kwargs': {
-          'domain': [['id', '=', id]], // Ambil collection berdasarkan ID
+          'domain': [
+            ['id', '=', id]
+          ], // Ambil collection berdasarkan ID
           'fields': [
             'name',
             'state',
@@ -744,7 +750,9 @@ class OdooService {
         },
       });
 
-      return response.isNotEmpty ? Map<String, dynamic>.from(response.first) : {};
+      return response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : {};
     } catch (e) {
       throw Exception('Failed to fetch collection detail: $e');
     }
@@ -759,7 +767,9 @@ class OdooService {
         'method': 'search_read',
         'args': [],
         'kwargs': {
-          'domain': [['id', 'in', ids]], // Filter berdasarkan ID
+          'domain': [
+            ['id', 'in', ids]
+          ], // Filter berdasarkan ID
           'fields': [
             'id',
             'name',
@@ -814,7 +824,9 @@ class OdooService {
       await _client.callKw({
         'model': 'collection.payment.wizard',
         'method': 'action_confirm',
-        'args': [[wizardId]], // Pass the wizard ID
+        'args': [
+          [wizardId]
+        ], // Pass the wizard ID
         'kwargs': {},
       });
     } catch (e) {
@@ -878,6 +890,57 @@ class OdooService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       throw Exception('Failed to fetch checkbooks: $e');
+    }
+  }
+
+  Future<void> cancelQuotation(int quotationId) async {
+    await checkSession();
+    try {
+      // Membuat wizard sale.order.cancel
+      final wizardId = await _client.callKw({
+        'model': 'sale.order.cancel',
+        'method': 'create',
+        'args': [
+          {
+            'order_id': quotationId, // Menggunakan order_id sebagai field utama
+          }
+        ],
+        'kwargs': {
+          'context': {}, // Tambahkan context jika diperlukan
+        },
+      });
+
+      if (wizardId == null) {
+        throw Exception('Failed to create cancel wizard.');
+      }
+
+      // Menjalankan action_cancel pada wizard
+      await _client.callKw({
+        'model': 'sale.order.cancel',
+        'method': 'action_cancel',
+        'args': [[wizardId]], // ID dari wizard
+        'kwargs': {
+          'context': {}, // Tambahkan context jika diperlukan
+        },
+      });
+    } catch (e) {
+      throw Exception('Failed to cancel quotation: $e');
+    }
+  }
+
+  Future<void> setToQuotation(int quotationId) async {
+    await checkSession();
+    try {
+      await _client.callKw({
+        'model': 'sale.order',
+        'method': 'action_draft',
+        'args': [
+          [quotationId]
+        ], // Mengirimkan ID Quotation
+        'kwargs': {}, // Memastikan kwargs disertakan
+      });
+    } catch (e) {
+      throw Exception('Failed to reset quotation to draft: $e');
     }
   }
 }

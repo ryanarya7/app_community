@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
 import 'form_header_quotation_screen.dart';
+import 'package:intl/intl.dart';
 
 class QuotationDetailScreen extends StatefulWidget {
   final OdooService odooService;
@@ -37,6 +38,12 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     });
   }
 
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID', // Format Indonesia
+    symbol: 'Rp ', // Simbol Rupiah
+    decimalDigits: 2,
+  );
+
   Future<void> _confirmQuotation() async {
     try {
       await widget.odooService.confirmQuotation(widget.quotationId);
@@ -51,6 +58,42 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error confirming quotation: $e')),
+      );
+    }
+  }
+
+  Future<void> _cancelQuotation() async {
+    try {
+      await widget.odooService.cancelQuotation(widget.quotationId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Quotation Cancelled Successfully!')),
+      );
+      setState(() {
+        quotationDetails =
+            widget.odooService.fetchQuotationById(widget.quotationId);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cancelling quotation: $e')),
+      );
+    }
+  }
+
+  Future<void> _setToQuotation() async {
+    try {
+      print('Resetting quotation to draft with ID: ${widget.quotationId}');
+      await widget.odooService.setToQuotation(widget.quotationId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Quotation Reset to Draft Successfully!')),
+      );
+      setState(() {
+        quotationDetails =
+            widget.odooService.fetchQuotationById(widget.quotationId);
+      });
+    } catch (e) {
+      print('Error resetting quotation to draft: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error resetting quotation: $e')),
       );
     }
   }
@@ -98,20 +141,27 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       case 'cancel':
         return Colors.red;
       case 'waiting':
+        return Colors.purple;
       case 'not_paid':
         return Colors.orange;
       case 'confirmed':
+        return Colors.green;
       case 'in_payment':
         return Colors.blue;
       case 'assigned':
         return Colors.teal;
       case 'done':
+        return Colors.grey;
       case 'paid':
         return Colors.green;
       case 'partial':
         return Colors.purple;
+      case 'sent':
+        return Colors.grey;
+      case 'sale':
+        return Colors.green;
       default:
-        return Colors.black54;
+        return const Color.fromARGB(255, 79, 80, 74);
     }
   }
 
@@ -158,6 +208,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
             final npwp = data['npwp'] ?? 'N/A';
             final orderLineIds = List<int>.from(data['order_line'] ?? []);
             final totalCost = data['amount_total'] ?? 0.0;
+            final state = data['state'] ?? 'Unknown';
             orderLines = widget.odooService.fetchOrderLines(orderLineIds);
 
             return Padding(
@@ -165,10 +216,36 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Quotation: ${data['name']}',
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Name and Status
+                      Expanded(
+                        child: Text(
+                          '${data['name']}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(state),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          state.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text('Customer: $customerName'),
@@ -228,6 +305,51 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       ],
                     ),
                   ],
+                  if (data['state'] == 'sale' || data['state'] == 'sent') ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _cancelQuotation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Cancel Quotation',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (data['state'] == 'cancel') ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed:
+                                _setToQuotation, // Memanggil aksi set to quotation
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Set to Quotation',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const Divider(height: 24, thickness: 2),
                   const Text('Order Lines',
                       style:
@@ -267,7 +389,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                         "Note") // Jika baris ini adalah note
                                     : Text(
                                         'Qty: ${line['product_uom_qty'] ?? 0} ${line['product_uom']?[1] ?? ''}\n'
-                                        'Unit Price: ${line['price_unit'] ?? 0.0} - Subtotal: ${line['price_subtotal'] ?? 0.0}',
+                                        'Unit Price: ${currencyFormatter.format(line['price_unit'] ?? 0.0)}\n'
+                                        'Subtotal: ${currencyFormatter.format(line['price_subtotal'] ?? 0.0)}',
                                       ),
                               ),
                             );
@@ -357,7 +480,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Rp ${totalCost.toStringAsFixed(2)}',
+                          currencyFormatter.format(totalCost),
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
