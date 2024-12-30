@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
 import 'form_header_quotation_screen.dart';
+import 'package:intl/intl.dart';
 
 class SaleOrderListScreen extends StatefulWidget {
   final OdooService odooService;
@@ -36,6 +37,12 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID', // Format Indonesia
+    symbol: 'Rp ',  // Simbol Rupiah
+    decimalDigits: 2,
+  );
 
   Future<void> _loadQuotations({bool isRefreshing = false}) async {
     if (_isLoading || (!_hasMore && !isRefreshing)) return;
@@ -118,7 +125,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
     final customer = item['partner_id']?[1] ?? '-';
     final shippingAddress = item['partner_shipping_id']?[1] ?? '-';
     final dateOrder = item['date_order']?.split(' ')[0] ?? 'Unknown'; // Format tanggal
-    final totalPrice = item['amount_total'] ?? 0.0; // Total price
+    // final totalPrice = item['amount_total'] ?? 0.0; // Total price
     final state = item['state'] ?? 'quotation'; // Default ke quotation
 
     Color _getStateColor(String state) {
@@ -211,7 +218,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
             Text("Shipping Address: $shippingAddress"),
             const SizedBox(height: 5),
             Text(
-              "Total: Rp ${totalPrice.toStringAsFixed(2)}",
+              currencyFormatter.format(item['amount_total'] ?? 0),
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.blue,

@@ -30,7 +30,18 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    final data =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (data != null) {
+      selectedCustomer = data['partner_id'];
+      selectedInvoiceAddress = data['partner_invoice_id'];
+      selectedDeliveryAddress = data['partner_shipping_id'];
+      selectedSalesperson = data['user_id'];
+      selectedPaymentTerm = data['payment_term_id'];
+      selectedWarehouse = data['warehouse_id'];
+    } else {
+      _loadData();
+    }
   }
 
   Future<void> _loadData() async {
@@ -53,13 +64,16 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
         // Auto-select salesperson based on logged-in user
         selectedSalesperson = salespersons.firstWhere(
           (salesperson) => salesperson['name'] == loggedInUser['name'],
-          orElse: () => salespersons.isNotEmpty ? salespersons.first : <String, dynamic>{},
+          orElse: () => salespersons.isNotEmpty
+              ? salespersons.first
+              : <String, dynamic>{},
         );
 
         // Auto-select warehouse based on logged-in user's warehouse_id
         selectedWarehouse = warehouses.firstWhere(
           (warehouse) => warehouse['id'] == loggedInUser['warehouse_id'],
-          orElse: () => warehouses.isNotEmpty ? warehouses.first : <String, dynamic>{},
+          orElse: () =>
+              warehouses.isNotEmpty ? warehouses.first : <String, dynamic>{},
         );
       });
     } catch (e) {
@@ -71,7 +85,8 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
 
   Future<void> _loadChildAddresses(int customerId) async {
     try {
-      final fetchedAddresses = await widget.odooService.fetchCustomerAddresses(customerId);
+      final fetchedAddresses =
+          await widget.odooService.fetchCustomerAddresses(customerId);
 
       setState(() {
         filteredInvoiceAddresses =
@@ -181,10 +196,8 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Form Header Quotation", 
-          style: TextStyle(
-            fontWeight: FontWeight.bold)
-        ),
+        title: const Text("Form Header Quotation",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blue,
       ),
       body: Padding(

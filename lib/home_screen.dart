@@ -42,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
   void _filterProducts(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -89,8 +88,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                child: product['image_1920'] is String && product['image_1920'] != ''
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(15)),
+                child: product['image_1920'] is String &&
+                        product['image_1920'] != ''
                     ? Image.memory(
                         base64Decode(product['image_1920']),
                         fit: BoxFit.cover,
@@ -107,7 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${product['default_code']} ${product['name']}',
+                    product['default_code'] != null &&
+                            product['default_code'] != false
+                        ? '${product['default_code']} ${product['name']}'
+                        : product['name'],
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -119,11 +123,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     'Rp.${product['list_price']}',
                     style: const TextStyle(
-                        color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14),
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   Text(
                     'Available: ${product['qty_available']}',
-                    style: const TextStyle(color: Colors.black54, fontSize: 14),
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -206,10 +216,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Products', 
-          style: TextStyle(
-            fontWeight: FontWeight.bold)
-        ),
+        title: const Text('Products',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         automaticallyImplyLeading: false,
         backgroundColor: Colors.blue[300],
         actions: [
@@ -245,7 +253,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 : _isGridView
                     ? GridView.builder(
                         padding: const EdgeInsets.all(10),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 0.7,
                           crossAxisSpacing: 10,
@@ -253,13 +262,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         itemCount: _filteredProducts.length,
                         itemBuilder: (context, index) {
-                          return _buildProductTile(_filteredProducts[index], index);
+                          return _buildProductTile(
+                              _filteredProducts[index], index);
                         },
                       )
                     : ListView.builder(
                         itemCount: _filteredProducts.length,
                         itemBuilder: (context, index) {
-                          return _buildProductListTile(_filteredProducts[index], index);
+                          return _buildProductListTile(
+                              _filteredProducts[index], index);
                         },
                       ),
           ),

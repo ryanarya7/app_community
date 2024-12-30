@@ -96,7 +96,11 @@ class _ProductsCategoryScreenState extends State<ProductsCategoryScreen> {
                       final product = _filteredProducts[index];
                       return ListTile(
                         title: Text(
-                            '${product['default_code']} ${product['name']}'),
+                          product['default_code'] != null &&
+                                  product['default_code'] != false
+                              ? '${product['default_code']} ${product['name']}'
+                              : product['name'],
+                        ),
                         subtitle: Text(
                           'Rp.${product['list_price']} - Available: ${product['qty_available']}',
                         ),

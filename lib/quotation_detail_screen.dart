@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
+import 'form_header_quotation_screen.dart';
 
 class QuotationDetailScreen extends StatefulWidget {
   final OdooService odooService;
@@ -173,25 +174,60 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                   Text('Customer: $customerName'),
                   Text('NPWP: $npwp'),
                   Text('Date: ${data['date_order'] ?? 'Unknown'}'),
-                  const SizedBox(height: 16),
-                  if (data['state'] == 'draft')
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _confirmQuotation,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text(
-                            'Confirm Quotation',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                  if (data['state'] == 'draft') ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Tombol Confirm Quotation
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _confirmQuotation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Confirm Quotation',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 14),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 16), // Spasi antara tombol
+                        // Tombol Edit Quotation
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => FormHeaderQuotation(
+                                    odooService: widget.odooService,
+                                  ),
+                                  settings: RouteSettings(arguments: data),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            icon: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 15,
+                            ),
+                            label: const Text(
+                              'Edit Quotation',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ],
                   const Divider(height: 24, thickness: 2),
                   const Text('Order Lines',
                       style:

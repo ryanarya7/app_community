@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _databaseController.text = 'BPAqc2';
-    _usernameController.text = 'admin';
+    _usernameController.text = 'app';
     _passwordController.text = 'a';
   }
 
@@ -110,7 +110,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const Text(
+                      'Powered by Alphasoft',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     // Input Fields
                     Card(
                       shape: RoundedRectangleBorder(
