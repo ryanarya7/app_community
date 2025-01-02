@@ -316,7 +316,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Quotation Details",
-              style: TextStyle(fontWeight: FontWeight.bold)),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           centerTitle: true,
           backgroundColor: Colors.blue[300],
           leading: IconButton(

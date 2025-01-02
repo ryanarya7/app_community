@@ -257,7 +257,8 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit Quotation Header'),
+      title: const Text('Edit Quotation Header',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       content: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
