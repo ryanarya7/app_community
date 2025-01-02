@@ -967,4 +967,43 @@ class OdooService {
     }
   }
 
+  Future<void> updateOrderLines(int quotationId, List<Map<String, dynamic>> orderLines) async {
+    await checkSession();
+    for (final line in orderLines) {
+      if (line['id'] == null) {
+        // Tambahkan order line baru
+        await _client.callKw({
+          'model': 'sale.order.line',
+          'method': 'create',
+          'args': [
+            {
+              'order_id': quotationId,
+              'product_id': line['product_id'],
+              'name': line['name'],
+              'product_uom_qty': line['product_uom_qty'],
+              'price_unit': line['price_unit'],
+              'product_uom': line['product_uom'],
+            },
+          ],
+          'kwargs': {},
+        });
+      } else {
+        // Update order line yang ada
+        await _client.callKw({
+          'model': 'sale.order.line',
+          'method': 'write',
+          'args': [
+            [line['id']],
+            {
+              'product_uom_qty': line['product_uom_qty'],
+              'price_unit': line['price_unit'],
+            },
+          ],
+          'kwargs': {},
+        });
+      }
+    }
+  }
+
+
 }

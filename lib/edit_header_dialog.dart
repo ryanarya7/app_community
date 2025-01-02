@@ -215,22 +215,40 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         DropdownSearch<Map<String, dynamic>>(
           items: items,
           selectedItem: selectedItem,
           itemAsString: (item) => item['name'] ?? '',
-          onChanged: isReadOnly ? null : onChanged,
-          enabled: !isReadOnly,
+          dropdownBuilder: (context, selectedItem) {
+            return Text(
+              selectedItem?['name'] ?? '',
+              style: const TextStyle(fontSize: 12), // Ukuran font dropdown
+            );
+          },
           popupProps: PopupProps.menu(
             showSearchBox: true,
             searchFieldProps: const TextFieldProps(
               decoration: InputDecoration(
-                  labelText: 'Search', border: OutlineInputBorder()),
+                labelText: 'Search',
+                border: OutlineInputBorder(),
+              ),
             ),
+            itemBuilder: (context, item, isSelected) {
+              return ListTile(
+                title: Text(
+                  item['name'] ?? '',
+                  style: const TextStyle(fontSize: 12), // Ukuran font pilihan
+                ),
+              );
+            },
           ),
+          onChanged: isReadOnly ? null : onChanged,
+          enabled: !isReadOnly,
         ),
       ],
     );
@@ -260,7 +278,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
                 });
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildDropdown(
               label: "Invoice Address",
               items: invoiceAddresses,
@@ -268,7 +286,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               onChanged: (value) =>
                   setState(() => selectedInvoiceAddress = value),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildDropdown(
               label: "Delivery Address",
               items: deliveryAddresses,
@@ -276,7 +294,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               onChanged: (value) =>
                   setState(() => selectedDeliveryAddress = value),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildDropdown(
               label: "Salesperson",
               items: salespersons,
@@ -284,25 +302,34 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               onChanged: (_) {},
               isReadOnly: true,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildDropdown(
               label: "Payment Term",
               items: paymentTerms,
               selectedItem: selectedPaymentTerm,
               onChanged: (value) => setState(() => selectedPaymentTerm = value),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildDropdown(
               label: "Warehouse",
               items: warehouses,
               selectedItem: selectedWarehouse,
               onChanged: (value) => setState(() => selectedWarehouse = value),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextField(
               controller: npwpController,
-              decoration: const InputDecoration(labelText: "NPWP"),
+              decoration: InputDecoration(
+                label: Text(
+                  "NPWP",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.black),
+                ),
+              ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),

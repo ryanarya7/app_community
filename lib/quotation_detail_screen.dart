@@ -22,6 +22,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   late Future<List<Map<String, dynamic>>> orderLines;
   late Future<String> deliveryOrderStatus;
   late Future<String> invoiceStatus;
+  bool isEditLineMode = false;
 
   @override
   void initState() {
@@ -195,6 +196,116 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     );
   }
 
+  Future<void> _saveChanges() async {
+    try {
+      final updatedLines = await orderLines;
+      await widget.odooService
+          .updateOrderLines(widget.quotationId, updatedLines);
+      setState(() {
+        isEditLineMode = false;
+        quotationDetails =
+            widget.odooService.fetchQuotationById(widget.quotationId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order lines updated successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving changes: $e')),
+      );
+    }
+  }
+
+  Future<void> _addProduct(Map<String, dynamic> product) async {
+    setState(() {
+      orderLines = orderLines.then((lines) {
+        lines.add({
+          'id': null,
+          'product_id': product['id'],
+          'name': product['name'],
+          'product_uom_qty': 1,
+          'price_unit': product['list_price'],
+        });
+        return lines;
+      });
+    });
+  }
+
+  Future<void> _removeLine(Map<String, dynamic> line) async {
+    setState(() {
+      orderLines = orderLines.then((lines) {
+        lines.remove(line);
+        return lines;
+      });
+    });
+  }
+
+  void _toggleEditMode() {
+    setState(() {
+      isEditLineMode = !isEditLineMode;
+    });
+  }
+
+  void _updateQuantity(Map<String, dynamic> line, int delta) {
+    setState(() {
+      final currentQty = line['product_uom_qty'] ?? 0;
+      if (currentQty + delta > 0) {
+        line['product_uom_qty'] = currentQty + delta;
+      }
+    });
+  }
+
+  void _showAddProductDialog() async {
+    final products = await widget.odooService.fetchProducts();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Products"),
+          content: SizedBox(
+            height: 400,
+            child: ListView.builder(
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return ListTile(
+                  title: Text(product['name']),
+                  subtitle: Text(
+                    'Price: ${currencyFormatter.format(product['list_price'])}\n'
+                    'Available: ${product['qty_available']}',
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.add, color: Colors.green),
+                    onPressed: () {
+                      Navigator.pop(context, {
+                        'id': null,
+                        'name': product['name'],
+                        'product_uom_qty': 1,
+                        'price_unit': product['list_price'],
+                        'subtotal': product['list_price'],
+                        'product_id': product['id'],
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        orderLines = orderLines.then((lines) {
+          lines.add(result);
+          return lines;
+        });
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -206,10 +317,58 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
         appBar: AppBar(
           title: const Text("Quotation Details",
               style: TextStyle(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          backgroundColor: Colors.blue[300],
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: _navigateToSaleOrderList, // Custom back button behavior
           ),
+          actions: [
+            FutureBuilder<Map<String, dynamic>>(
+              future: quotationDetails,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting ||
+                    !snapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
+                final status = snapshot.data!['state'] ?? '';
+                final List<Widget> actions = [];
+                if (status == 'draft') {
+                  actions.addAll([
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.white),
+                      onPressed: _confirmQuotation,
+                      tooltip: 'Confirm',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.white),
+                      onPressed: () async {
+                        final data = await quotationDetails;
+                        _showEditHeaderDialog(data);
+                      },
+                      tooltip: 'Edit',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: _cancelQuotation,
+                      tooltip: 'Cancel',
+                    ),
+                  ]);
+                }
+                if (status == 'cancel') {
+                  actions.add(
+                    IconButton(
+                      icon: const Icon(Icons.undo, color: Colors.white),
+                      onPressed: _setToQuotation,
+                      tooltip: 'Set to Quotation',
+                    ),
+                  );
+                }
+
+                return Row(children: actions);
+              },
+            ),
+          ],
         ),
         body: FutureBuilder<Map<String, dynamic>>(
           future: quotationDetails,
@@ -272,115 +431,29 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                   Text('Customer: $customerName'),
                   Text('NPWP: $npwp'),
                   Text('Date: ${data['date_order'] ?? 'Unknown'}'),
-                  if (data['state'] == 'draft') ...[
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Tombol Confirm Quotation
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _confirmQuotation,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: const Text(
-                              'Confirm',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16), // Spasi antara tombol
-                        // Tombol Edit Quotation
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final data =
-                                  await quotationDetails; // Menunggu fetch data selesai
-                              _showEditHeaderDialog(data);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            icon: const Icon(Icons.edit,
-                                color: Colors.white, size: 15),
-                            label: const Text(
-                              'Edit',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _cancelQuotation,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  // if (data['state'] == 'sale' || data['state'] == 'sent') ...[
-                  //   const SizedBox(height: 16),
-                  //   Row(
-                  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  //     children: [
-                  //       Expanded(
-                  //         child: ElevatedButton(
-                  //           onPressed: _cancelQuotation,
-                  //           style: ElevatedButton.styleFrom(
-                  //             backgroundColor: Colors.red,
-                  //             padding: const EdgeInsets.symmetric(vertical: 12),
-                  //           ),
-                  //           child: const Text(
-                  //             'Cancel Quotation',
-                  //             style:
-                  //                 TextStyle(color: Colors.white, fontSize: 14),
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ],
-                  if (data['state'] == 'cancel') ...[
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed:
-                                _setToQuotation, // Memanggil aksi set to quotation
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: const Text(
-                              'Set to Quotation',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                   const Divider(height: 24, thickness: 2),
-                  const Text('Order Lines',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Order Lines",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      if (!isEditLineMode)
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: _toggleEditMode,
+                          tooltip: 'Edit Order Lines',
+                        ),
+                      if (isEditLineMode)
+                        IconButton(
+                          icon: const Icon(Icons.save),
+                          onPressed: _saveChanges,
+                          tooltip: 'Save Changes',
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -405,22 +478,102 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                           itemCount: lines.length,
                           itemBuilder: (context, index) {
                             final line = lines[index];
-                            final isNote = line['display_type'] == 'line_note';
+                            // final lineId = line['id'];
+                            final name = line['name'] ?? 'No Description';
+                            final quantity = line['product_uom_qty'] ?? 0;
+                            final price = line['price_unit'] ?? 0.0;
 
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: ListTile(
-                                title: Text(line['name'] ?? 'No Description'),
-                                subtitle: isNote
-                                    ? const Text(
-                                        "Note") // Jika baris ini adalah note
-                                    : Text(
-                                        'Qty: ${line['product_uom_qty'] ?? 0} ${line['product_uom']?[1] ?? ''}\n'
-                                        'Unit Price: ${currencyFormatter.format(line['price_unit'] ?? 0.0)}\n'
-                                        'Subtotal: ${currencyFormatter.format(line['price_subtotal'] ?? 0.0)}',
+                            if (!isEditLineMode) {
+                              // Tampilan normal (non-edit mode)
+                              return Card(
+                                margin:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: ListTile(
+                                  title: Text(name),
+                                  subtitle: Text(
+                                    'Qty: $quantity\nPrice: $price\nSubtotal: ${quantity * price}',
+                                  ),
+                                  trailing: null,
+                                ),
+                              );
+                            } else {
+                              // Tampilan edit mode
+                              return Card(
+                                margin:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      // Left Column: Item name and price
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                                'Price: ${currencyFormatter.format(price)}'),
+                                          ],
+                                        ),
                                       ),
-                              ),
-                            );
+                                      // Right Column: Quantity Controls and Delete
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.remove_circle,
+                                                color: Colors.red),
+                                            onPressed: () =>
+                                                _updateQuantity(line, -1),
+                                          ),
+                                          SizedBox(
+                                            width: 50,
+                                            child: TextField(
+                                              controller: TextEditingController(
+                                                  text: quantity.toString()),
+                                              keyboardType:
+                                                  TextInputType.number,
+                                              textAlign: TextAlign.center,
+                                              decoration: const InputDecoration(
+                                                border: OutlineInputBorder(),
+                                                isDense: true,
+                                              ),
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  line['product_uom_qty'] =
+                                                      int.tryParse(value) ?? 0;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.add_circle,
+                                                color: Colors.green),
+                                            onPressed: () =>
+                                                _updateQuantity(line, 1),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete,
+                                                color: Colors.red),
+                                            onPressed: () => _removeLine(line),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
                           },
                         );
                       },
