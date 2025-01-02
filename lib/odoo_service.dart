@@ -435,6 +435,7 @@ class OdooService {
             'date_order', // Quotation Date
             'amount_total',
             'state',
+            'user_member_id'
           ],
           'limit': 1, // Fetch only one record
         },
@@ -943,4 +944,27 @@ class OdooService {
       throw Exception('Failed to reset quotation to draft: $e');
     }
   }
+
+  Future<void> updateQuotationHeader(int quotationId, Map<String, dynamic> data) async {
+    await checkSession();
+    try {
+      print('Updating Quotation Header for ID: $quotationId with Data: $data');
+
+      await _client.callKw({
+        'model': 'sale.order',
+        'method': 'write',
+        'args': [
+          [quotationId], // Quotation ID dalam array
+          data, // Data yang akan ditulis
+        ],
+        'kwargs': {}, // Tambahkan kwargs sebagai parameter kosong
+      });
+
+      print('Quotation Header updated successfully.');
+    } catch (e) {
+      print('Error updating Quotation Header: $e');
+      throw Exception('Failed to update quotation header: $e');
+    }
+  }
+
 }

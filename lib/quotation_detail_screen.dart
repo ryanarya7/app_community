@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
-import 'form_header_quotation_screen.dart';
 import 'package:intl/intl.dart';
+import 'edit_header_dialog.dart';
 
 class QuotationDetailScreen extends StatefulWidget {
   final OdooService odooService;
@@ -94,6 +94,27 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       print('Error resetting quotation to draft: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error resetting quotation: $e')),
+      );
+    }
+  }
+
+  void _showEditHeaderDialog(Map<String, dynamic> headerData) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => EditHeaderDialog(
+        initialData: headerData, // Menggunakan initialData sebagai parameter
+        odooService: widget.odooService,
+      ),
+    );
+
+    if (result != null) {
+      // Update quotationDetails setelah edit
+      setState(() {
+        quotationDetails =
+            widget.odooService.fetchQuotationById(widget.quotationId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Quotation header updated successfully!')),
       );
     }
   }
@@ -265,7 +286,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                             child: const Text(
-                              'Confirm Quotation',
+                              'Confirm',
                               style:
                                   TextStyle(color: Colors.white, fontSize: 14),
                             ),
@@ -275,41 +296,25 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                         // Tombol Edit Quotation
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => FormHeaderQuotation(
-                                    odooService: widget.odooService,
-                                  ),
-                                  settings: RouteSettings(arguments: data),
-                                ),
-                              );
+                            onPressed: () async {
+                              final data =
+                                  await quotationDetails; // Menunggu fetch data selesai
+                              _showEditHeaderDialog(data);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                            icon: const Icon(
-                              Icons.edit,
-                              color: Colors.white,
-                              size: 15,
-                            ),
+                            icon: const Icon(Icons.edit,
+                                color: Colors.white, size: 15),
                             label: const Text(
-                              'Edit Quotation',
+                              'Edit',
                               style:
                                   TextStyle(color: Colors.white, fontSize: 14),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                  if (data['state'] == 'sale' || data['state'] == 'sent') ...[
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
+                        const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
                             onPressed: _cancelQuotation,
@@ -318,7 +323,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                             child: const Text(
-                              'Cancel Quotation',
+                              'Cancel',
                               style:
                                   TextStyle(color: Colors.white, fontSize: 14),
                             ),
@@ -327,6 +332,28 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       ],
                     ),
                   ],
+                  // if (data['state'] == 'sale' || data['state'] == 'sent') ...[
+                  //   const SizedBox(height: 16),
+                  //   Row(
+                  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //     children: [
+                  //       Expanded(
+                  //         child: ElevatedButton(
+                  //           onPressed: _cancelQuotation,
+                  //           style: ElevatedButton.styleFrom(
+                  //             backgroundColor: Colors.red,
+                  //             padding: const EdgeInsets.symmetric(vertical: 12),
+                  //           ),
+                  //           child: const Text(
+                  //             'Cancel Quotation',
+                  //             style:
+                  //                 TextStyle(color: Colors.white, fontSize: 14),
+                  //           ),
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ],
                   if (data['state'] == 'cancel') ...[
                     const SizedBox(height: 16),
                     Row(
