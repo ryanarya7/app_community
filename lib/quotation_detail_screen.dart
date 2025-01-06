@@ -19,6 +19,11 @@ class QuotationDetailScreen extends StatefulWidget {
 
 class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   late Future<Map<String, dynamic>> quotationDetails;
+  late List<Map<String, dynamic>> tempOrderLines = [];
+  List<int> deletedOrderLines = [];
+  late List<Map<String, dynamic>> editOrderLines = [];
+  late List<TextEditingController> _quantityControllers;
+  late List<TextEditingController> _priceControllers;
   late Future<List<Map<String, dynamic>>> orderLines;
   late Future<String> deliveryOrderStatus;
   late Future<String> invoiceStatus;
@@ -27,6 +32,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _quantityControllers = [];
+    _priceControllers = [];
+    _loadQuotationDetails();
     quotationDetails =
         widget.odooService.fetchQuotationById(widget.quotationId);
     quotationDetails.then((data) {
@@ -44,6 +52,50 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     symbol: 'Rp ', // Simbol Rupiah
     decimalDigits: 2,
   );
+
+  void _loadQuotationDetails() {
+    quotationDetails =
+        widget.odooService.fetchQuotationById(widget.quotationId);
+    quotationDetails.then((data) {
+      final saleOrderName = data['name'];
+      setState(() {
+        deliveryOrderStatus =
+            widget.odooService.fetchDeliveryOrderStatus(saleOrderName);
+        invoiceStatus = widget.odooService.fetchInvoiceStatus(saleOrderName);
+      });
+    });
+  }
+
+  Future<void> _loadOrderLines() async {
+    try {
+      final data = await quotationDetails; // Ambil detail quotation
+      final orderLineIds = List<int>.from(data['order_line'] ?? []);
+      final fetchedOrderLines =
+          await widget.odooService.fetchOrderLines(orderLineIds);
+
+      setState(() {
+        // Data awal untuk tampilan normal
+        orderLines = Future.value(fetchedOrderLines);
+
+        // Salin ke tempOrderLines untuk mode edit
+        tempOrderLines = List<Map<String, dynamic>>.from(fetchedOrderLines);
+
+        // Inisialisasi pengontrol untuk mode edit
+        _quantityControllers = tempOrderLines
+            .map((line) =>
+                TextEditingController(text: line['product_uom_qty'].toString()))
+            .toList();
+        _priceControllers = tempOrderLines
+            .map((line) => TextEditingController(
+                text: line['price_unit'].toStringAsFixed(2)))
+            .toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading order lines: $e')),
+      );
+    }
+  }
 
   Future<void> _confirmQuotation() async {
     try {
@@ -198,14 +250,18 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
 
   Future<void> _saveChanges() async {
     try {
-      final updatedLines = await orderLines;
       await widget.odooService
-          .updateOrderLines(widget.quotationId, updatedLines);
+          .updateOrderLines(widget.quotationId, tempOrderLines);
+      for (final id in deletedOrderLines) {
+        await widget.odooService.deleteOrderLine(id);
+      }
+
       setState(() {
         isEditLineMode = false;
-        quotationDetails =
-            widget.odooService.fetchQuotationById(widget.quotationId);
+        deletedOrderLines.clear(); // Kosongkan daftar baris yang dihapus
+        _loadQuotationDetails(); // Reload data setelah penyimpanan
       });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Order lines updated successfully!')),
       );
@@ -216,94 +272,173 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     }
   }
 
-  Future<void> _addProduct(Map<String, dynamic> product) async {
+  void _addProduct(Map<String, dynamic> product) {
     setState(() {
-      orderLines = orderLines.then((lines) {
-        lines.add({
-          'id': null,
-          'product_id': product['id'],
-          'name': product['name'],
-          'product_uom_qty': 1,
-          'price_unit': product['list_price'],
-        });
-        return lines;
+      tempOrderLines.add({
+        'id': null,
+        'product_id': product['product_id'],
+        'name': product['name'],
+        'product_uom_qty': 1,
+        'price_unit': product['price_unit'],
       });
+
+      // Tambahkan controller baru untuk produk yang ditambahkan
+      _quantityControllers.add(TextEditingController(text: '1'));
+      _priceControllers.add(TextEditingController(
+          text: product['price_unit'].toStringAsFixed(2)));
     });
   }
 
-  Future<void> _removeLine(Map<String, dynamic> line) async {
+  void _updateLinePrice(int index, String newPrice) {
+    final parsedPrice =
+        double.tryParse(newPrice) ?? tempOrderLines[index]['price_unit'];
     setState(() {
-      orderLines = orderLines.then((lines) {
-        lines.remove(line);
-        return lines;
-      });
+      tempOrderLines[index]['price_unit'] = parsedPrice;
+      _priceControllers[index].text = parsedPrice.toStringAsFixed(2);
+    });
+  }
+
+  void _updateLineQuantity(int index, String newQty) {
+    final parsedQty =
+        int.tryParse(newQty) ?? tempOrderLines[index]['product_uom_qty'];
+    setState(() {
+      tempOrderLines[index]['product_uom_qty'] = parsedQty;
+      _quantityControllers[index].text = parsedQty.toString();
+    });
+  }
+
+  void _removeLine(int index) {
+    setState(() {
+      if (tempOrderLines[index]['id'] != null) {
+        // Tambahkan ID ke daftar baris yang dihapus
+        deletedOrderLines.add(tempOrderLines[index]['id']);
+      }
+      // Hapus baris dari daftar terkait
+      tempOrderLines.removeAt(index);
+      _quantityControllers.removeAt(index);
+      _priceControllers.removeAt(index);
     });
   }
 
   void _toggleEditMode() {
     setState(() {
       isEditLineMode = !isEditLineMode;
+      if (isEditLineMode) {
+        // Masuk ke mode edit: Salin data ke editOrderLines
+        editOrderLines = List<Map<String, dynamic>>.from(tempOrderLines);
+      } else {
+        // Keluar mode edit: Kembalikan data dari editOrderLines
+        tempOrderLines = List<Map<String, dynamic>>.from(editOrderLines);
+        _quantityControllers = tempOrderLines
+            .map((line) =>
+                TextEditingController(text: line['product_uom_qty'].toString()))
+            .toList();
+        _priceControllers = tempOrderLines
+            .map((line) => TextEditingController(
+                text: line['price_unit'].toStringAsFixed(2)))
+            .toList();
+      }
     });
   }
 
-  void _updateQuantity(Map<String, dynamic> line, int delta) {
+  void _updateQuantity(int index, int delta) {
     setState(() {
-      final currentQty = line['product_uom_qty'] ?? 0;
-      if (currentQty + delta > 0) {
-        line['product_uom_qty'] = currentQty + delta;
+      final currentQty = tempOrderLines[index]['product_uom_qty'] ?? 0;
+      final newQty = currentQty + delta;
+
+      if (newQty > 0) {
+        tempOrderLines[index]['product_uom_qty'] = newQty;
+        _quantityControllers[index].text = newQty.toString();
+      } else {
+        _removeLine(index);
       }
     });
   }
 
   void _showAddProductDialog() async {
-    final products = await widget.odooService.fetchProducts();
+    try {
+      // Fetch daftar produk
+      final products = await widget.odooService.fetchProducts();
 
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Products"),
-          content: SizedBox(
-            height: 400,
-            child: ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return ListTile(
-                  title: Text(product['name']),
-                  subtitle: Text(
-                    'Price: ${currencyFormatter.format(product['list_price'])}\n'
-                    'Available: ${product['qty_available']}',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.add, color: Colors.green),
-                    onPressed: () {
-                      Navigator.pop(context, {
-                        'id': null,
-                        'name': product['name'],
-                        'product_uom_qty': 1,
-                        'price_unit': product['list_price'],
-                        'subtotal': product['list_price'],
-                        'product_id': product['id'],
-                      });
-                    },
-                  ),
-                );
-              },
+      // Filter hanya produk dengan qty_available > 0
+      final availableProducts = products.where((product) {
+        final qtyAvailable = product['qty_available'] ?? 0;
+        return qtyAvailable > 0;
+      }).toList();
+
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Select Product"),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400.0,
+              child: ListView.builder(
+                itemCount: availableProducts.length,
+                itemBuilder: (context, index) {
+                  final product = availableProducts[index];
+                  return ListTile(
+                    title: Text(product['name']),
+                    subtitle: Text(
+                      'Price: ${currencyFormatter.format(product['list_price'])}\n'
+                      'Available: ${product['qty_available']}',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.add_circle, color: Colors.green),
+                      onPressed: () {
+                        Navigator.pop(context, {
+                          'id': null,
+                          'product_id': product['id'],
+                          'name': product['name'],
+                          'product_uom_qty': 1,
+                          'price_unit': product['list_price'],
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
 
-    if (result != null) {
-      setState(() {
-        orderLines = orderLines.then((lines) {
-          lines.add(result);
-          return lines;
-        });
-      });
+      if (result != null) {
+        _addProduct(result);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading products: $e')),
+      );
     }
+  }
+
+  void _cancelEditMode() {
+    setState(() {
+      isEditLineMode = false;
+      // Kembalikan data dari editOrderLines
+      tempOrderLines = List<Map<String, dynamic>>.from(editOrderLines);
+      _quantityControllers = tempOrderLines
+          .map((line) =>
+              TextEditingController(text: line['product_uom_qty'].toString()))
+          .toList();
+      _priceControllers = tempOrderLines
+          .map((line) => TextEditingController(
+              text: line['price_unit'].toStringAsFixed(2)))
+          .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _quantityControllers) {
+      controller.dispose();
+    }
+    for (var controller in _priceControllers) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   @override
@@ -440,75 +575,59 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 18),
                       ),
-                      if (!isEditLineMode)
+                      if (isEditLineMode)
+                        Row(
+                          children: [
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.add_box, color: Colors.blue),
+                              onPressed: _showAddProductDialog,
+                              tooltip: 'Add Product',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.save, color: Colors.green),
+                              onPressed: _saveChanges,
+                              tooltip: 'Save Changes',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.undo_rounded,
+                                  color: Colors.red),
+                              onPressed: _cancelEditMode,
+                              tooltip: 'Cancel Edit',
+                            ),
+                          ],
+                        ),
+                      if (!isEditLineMode && state == 'draft')
                         IconButton(
                           icon: const Icon(Icons.edit),
-                          onPressed: _toggleEditMode,
+                          onPressed: () async {
+                            await _loadOrderLines();
+                            setState(() {
+                              isEditLineMode = true;
+                            });
+                          },
                           tooltip: 'Edit Order Lines',
-                        ),
-                      if (isEditLineMode)
-                        IconButton(
-                          icon: const Icon(Icons.save),
-                          onPressed: _saveChanges,
-                          tooltip: 'Save Changes',
                         ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: FutureBuilder<List<Map<String, dynamic>>>(
-                      future: orderLines,
-                      builder: (context, lineSnapshot) {
-                        if (lineSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        if (lineSnapshot.hasError) {
-                          return Center(
-                              child: Text('Error: ${lineSnapshot.error}'));
-                        }
-                        if (!lineSnapshot.hasData ||
-                            lineSnapshot.data!.isEmpty) {
-                          return const Center(child: Text('No order lines.'));
-                        }
+                    child: isEditLineMode
+                        ? ListView.builder(
+                            itemCount: tempOrderLines.length,
+                            itemBuilder: (context, index) {
+                              final line = tempOrderLines[index];
+                              final name = line['name'] ?? 'No Description';
 
-                        final lines = lineSnapshot.data!;
-                        return ListView.builder(
-                          itemCount: lines.length,
-                          itemBuilder: (context, index) {
-                            final line = lines[index];
-                            // final lineId = line['id'];
-                            final name = line['name'] ?? 'No Description';
-                            final quantity = line['product_uom_qty'] ?? 0;
-                            final price = line['price_unit'] ?? 0.0;
-
-                            if (!isEditLineMode) {
-                              // Tampilan normal (non-edit mode)
-                              return Card(
-                                margin:
-                                    const EdgeInsets.symmetric(vertical: 8.0),
-                                child: ListTile(
-                                  title: Text(name),
-                                  subtitle: Text(
-                                    'Qty: $quantity\nPrice: $price\nSubtotal: ${quantity * price}',
-                                  ),
-                                  trailing: null,
-                                ),
-                              );
-                            } else {
-                              // Tampilan edit mode
                               return Card(
                                 margin:
                                     const EdgeInsets.symmetric(vertical: 8.0),
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Left Column: Item name and price
                                       Expanded(
+                                        flex: 2,
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -516,68 +635,143 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                             Text(
                                               name,
                                               style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
+                                                  fontWeight: FontWeight.bold),
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(
-                                                'Price: ${currencyFormatter.format(price)}'),
-                                          ],
-                                        ),
-                                      ),
-                                      // Right Column: Quantity Controls and Delete
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(
-                                                Icons.remove_circle,
-                                                color: Colors.red),
-                                            onPressed: () =>
-                                                _updateQuantity(line, -1),
-                                          ),
-                                          SizedBox(
-                                            width: 50,
-                                            child: TextField(
-                                              controller: TextEditingController(
-                                                  text: quantity.toString()),
+                                            TextField(
+                                              controller:
+                                                  _priceControllers[index],
                                               keyboardType:
                                                   TextInputType.number,
-                                              textAlign: TextAlign.center,
                                               decoration: const InputDecoration(
+                                                labelText: 'Price',
                                                 border: OutlineInputBorder(),
                                                 isDense: true,
                                               ),
                                               onChanged: (value) {
+                                                final parsedPrice =
+                                                    double.tryParse(value) ??
+                                                        tempOrderLines[index]
+                                                            ['price_unit'];
                                                 setState(() {
-                                                  line['product_uom_qty'] =
-                                                      int.tryParse(value) ?? 0;
+                                                  tempOrderLines[index]
+                                                          ['price_unit'] =
+                                                      parsedPrice;
                                                 });
                                               },
                                             ),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.add_circle,
-                                                color: Colors.green),
-                                            onPressed: () =>
-                                                _updateQuantity(line, 1),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete,
-                                                color: Colors.red),
-                                            onPressed: () => _removeLine(line),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Row(
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(
+                                                  Icons.remove_circle,
+                                                  color: Colors.red),
+                                              onPressed: () =>
+                                                  _updateQuantity(index, -1),
+                                            ),
+                                            Expanded(
+                                              child: TextField(
+                                                controller:
+                                                    _quantityControllers[index],
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                textAlign: TextAlign.center,
+                                                decoration:
+                                                    const InputDecoration(
+                                                  border: OutlineInputBorder(),
+                                                  isDense: true,
+                                                ),
+                                                onChanged: (value) {
+                                                  final parsedQty = int
+                                                          .tryParse(value) ??
+                                                      tempOrderLines[index]
+                                                          ['product_uom_qty'];
+                                                  setState(() {
+                                                    tempOrderLines[index][
+                                                            'product_uom_qty'] =
+                                                        parsedQty;
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.add_circle,
+                                                  color: Colors.green),
+                                              onPressed: () =>
+                                                  _updateQuantity(index, 1),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete,
+                                            color: Colors.red),
+                                        onPressed: () {
+                                          setState(() {
+                                            if (tempOrderLines[index]['id'] !=
+                                                null) {
+                                              deletedOrderLines.add(
+                                                  tempOrderLines[index]['id']);
+                                            }
+                                            tempOrderLines.removeAt(index);
+                                            _quantityControllers
+                                                .removeAt(index);
+                                            _priceControllers.removeAt(index);
+                                          });
+                                        },
                                       ),
                                     ],
                                   ),
                                 ),
                               );
-                            }
-                          },
-                        );
-                      },
-                    ),
+                            },
+                          )
+                        : FutureBuilder<List<Map<String, dynamic>>>(
+                            future: orderLines,
+                            builder: (context, lineSnapshot) {
+                              if (lineSnapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              }
+                              if (lineSnapshot.hasError) {
+                                return Center(
+                                    child:
+                                        Text('Error: ${lineSnapshot.error}'));
+                              }
+                              if (!lineSnapshot.hasData ||
+                                  lineSnapshot.data!.isEmpty) {
+                                return const Center(
+                                    child: Text('No order lines.'));
+                              }
+
+                              final lines = lineSnapshot.data!;
+                              return ListView.builder(
+                                itemCount: lines.length,
+                                itemBuilder: (context, index) {
+                                  final line = lines[index];
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 8.0),
+                                    child: ListTile(
+                                      title: Text(
+                                          line['name'] ?? 'No Description'),
+                                      subtitle: Text(
+                                        'Qty: ${line['product_uom_qty']}\n'
+                                        'Price: ${currencyFormatter.format(line['price_unit'])}\n'
+                                        'Subtotal: ${currencyFormatter.format(line['product_uom_qty'] * line['price_unit'])}',
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
                   ),
                   const Divider(height: 24, thickness: 2),
                   const Text(

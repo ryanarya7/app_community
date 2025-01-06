@@ -919,7 +919,9 @@ class OdooService {
       await _client.callKw({
         'model': 'sale.order.cancel',
         'method': 'action_cancel',
-        'args': [[wizardId]], // ID dari wizard
+        'args': [
+          [wizardId]
+        ], // ID dari wizard
         'kwargs': {
           'context': {}, // Tambahkan context jika diperlukan
         },
@@ -945,7 +947,8 @@ class OdooService {
     }
   }
 
-  Future<void> updateQuotationHeader(int quotationId, Map<String, dynamic> data) async {
+  Future<void> updateQuotationHeader(
+      int quotationId, Map<String, dynamic> data) async {
     await checkSession();
     try {
       print('Updating Quotation Header for ID: $quotationId with Data: $data');
@@ -967,7 +970,8 @@ class OdooService {
     }
   }
 
-  Future<void> updateOrderLines(int quotationId, List<Map<String, dynamic>> orderLines) async {
+  Future<void> updateOrderLines(
+      int quotationId, List<Map<String, dynamic>> orderLines) async {
     await checkSession();
     for (final line in orderLines) {
       if (line['id'] == null) {
@@ -977,18 +981,16 @@ class OdooService {
           'method': 'create',
           'args': [
             {
-              'order_id': quotationId,
-              'product_id': line['product_id'],
-              'name': line['name'],
-              'product_uom_qty': line['product_uom_qty'],
-              'price_unit': line['price_unit'],
-              'product_uom': line['product_uom'],
+              'order_id': quotationId, // ID dari Quotation
+              'product_id': line['product_id'], // Produk yang dipilih
+              'name': line['name'], // Deskripsi produk
+              'product_uom_qty': line['product_uom_qty'], // Kuantitas
+              'price_unit': line['price_unit'], // Harga unit
             },
           ],
           'kwargs': {},
         });
       } else {
-        // Update order line yang ada
         await _client.callKw({
           'model': 'sale.order.line',
           'method': 'write',
@@ -1005,5 +1007,19 @@ class OdooService {
     }
   }
 
-
+  Future<void> deleteOrderLine(int lineId) async {
+    await checkSession();
+    try {
+      await _client.callKw({
+        'model': 'sale.order.line',
+        'method': 'unlink',
+        'args': [
+          [lineId]
+        ], // Hapus berdasarkan ID
+        'kwargs': {},
+      });
+    } catch (e) {
+      throw Exception('Failed to delete order line: $e');
+    }
+  }
 }
