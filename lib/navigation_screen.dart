@@ -101,9 +101,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
           items: [
             _buildNavItem(Icons.home, "Home", 0),
             // _buildNavItem(Icons.category, "Categories", 1),
-            _buildNavItem(Icons.shopping_cart, "Sales Order", 2),
-            _buildNavItem(Icons.attach_money, "Collection", 3),
-            _buildNavItem(Icons.person, "Profile", 4),
+            _buildNavItem(Icons.shopping_cart, "Sales Order", 1),
+            _buildNavItem(Icons.attach_money, "Collection", 2),
+            _buildNavItem(Icons.person, "Profile", 3),
           ],
         ),
       ),

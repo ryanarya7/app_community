@@ -244,7 +244,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       context,
       '/home', // Explicitly target the Sales Order List screen
       (route) => false,
-      arguments: 2, // Ensure no lingering arguments are passed
+      arguments: 1, // Ensure no lingering arguments are passed
     );
   }
 
