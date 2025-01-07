@@ -13,6 +13,9 @@ class CollectionScreen extends StatefulWidget {
 
 class _CollectionScreenState extends State<CollectionScreen> {
   late Future<List<Map<String, dynamic>>> collectionList;
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _filteredCollections = [];
+  List<Map<String, dynamic>> _allCollections = [];
 
   @override
   void initState() {
@@ -20,8 +23,24 @@ class _CollectionScreenState extends State<CollectionScreen> {
     _loadCollections();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _loadCollections() {
     collectionList = widget.odooService.fetchCollections();
+    collectionList.then((collections) {
+      setState(() {
+        _allCollections = collections;
+        _filteredCollections = collections; // Awal tampilkan semua
+      });
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading collections: $error')),
+      );
+    });
   }
 
   void _refresh() {
@@ -30,27 +49,59 @@ class _CollectionScreenState extends State<CollectionScreen> {
     });
   }
 
-  void _navigateToFormCollection() {
-    Navigator.pushNamed(context, '/formCollection').then((_) {
-      _refresh();
+  void _filterCollections(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCollections = _allCollections; // Reset jika kosong
+      } else {
+        _filteredCollections = _allCollections.where((collection) {
+          final name = collection['name'] ?? '';
+          final createdBy = collection['create_uid']?[1] ?? '';
+          final state = collection['state'] ?? '';
+          return name.toLowerCase().contains(query.toLowerCase()) ||
+              createdBy.toLowerCase().contains(query.toLowerCase()) ||
+              state.toLowerCase().contains(query.toLowerCase());
+        }).toList();
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Collections', 
-          style: TextStyle(
-            fontWeight: FontWeight.bold)
-        ),
-        backgroundColor: Colors.blue[300],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: AppBar(
+          automaticallyImplyLeading: false, // Hilangkan tombol back
+          backgroundColor: Colors.white,
+          elevation: 1,
+          title: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterCollections,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+                hintText: 'Search collections...',
+                hintStyle: const TextStyle(color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
-        ],
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.grey),
+              onPressed: _refresh,
+            ),
+          ],
+        ),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: collectionList,
@@ -64,26 +115,25 @@ class _CollectionScreenState extends State<CollectionScreen> {
             );
           }
 
-          final collections = snapshot.data ?? [];
-          if (collections.isEmpty) {
+          if (_filteredCollections.isEmpty) {
             return const Center(child: Text('No collections available.'));
           }
 
           return ListView.builder(
-            itemCount: collections.length,
+            itemCount: _filteredCollections.length,
             itemBuilder: (context, index) {
-              final collection = collections[index];
+              final collection = _filteredCollections[index];
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: InkWell( // Tambahkan InkWell untuk membuat Card dapat diklik
+                child: InkWell(
                   onTap: () {
                     Navigator.pushNamed(
                       context,
                       '/collectionDetail',
-                      arguments: collection['id'], // Kirim ID collection ke layar detail
+                      arguments: collection['id'],
                     );
                   },
                   child: Padding(
@@ -91,7 +141,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header Row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -122,7 +171,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        // Details
                         Text(
                           'Created By: ${collection['create_uid']?[1] ?? 'N/A'}',
                           style: const TextStyle(fontSize: 14),
@@ -146,15 +194,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
           );
         },
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _navigateToFormCollection,
-      //   child: const Icon(Icons.add),
-      //   backgroundColor: Colors.blue,
-      // ),
     );
   }
 
-  // Helper to get state color
   Color _getStateColor(String? state) {
     switch (state) {
       case 'draft':

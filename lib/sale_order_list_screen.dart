@@ -40,7 +40,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID', // Format Indonesia
-    symbol: 'Rp ',  // Simbol Rupiah
+    symbol: 'Rp ', // Simbol Rupiah
     decimalDigits: 2,
   );
 
@@ -124,7 +124,8 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
     final name = item['name'] ?? 'No Name';
     final customer = item['partner_id']?[1] ?? '-';
     final shippingAddress = item['partner_shipping_id']?[1] ?? '-';
-    final dateOrder = item['date_order']?.split(' ')[0] ?? 'Unknown'; // Format tanggal
+    final dateOrder =
+        item['date_order']?.split(' ')[0] ?? 'Unknown'; // Format tanggal
     // final totalPrice = item['amount_total'] ?? 0.0; // Total price
     final state = item['state'] ?? 'quotation'; // Default ke quotation
 
@@ -240,36 +241,42 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sales Orders', 
-          style: TextStyle(
-            fontWeight: FontWeight.bold)
-        ),
-        backgroundColor: Colors.blue[300],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadQuotations(isRefreshing: true),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(10.0),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60), // Atur tinggi AppBar
+        child: AppBar(
+          automaticallyImplyLeading: false, // Menghapus tombol back
+          backgroundColor: Colors.white,
+          elevation: 1,
+          title: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10.0),
             child: TextField(
               controller: _searchController,
               onChanged: _filterQuotations,
               decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 15),
                 hintText: 'Search sales orders...',
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: const TextStyle(color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                filled: true,
+                fillColor: Colors.white, // Warna latar search bar
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
                 ),
               ),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.grey),
+              onPressed: () => _loadQuotations(isRefreshing: true),
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
           Expanded(
             child: _filteredQuotations.isEmpty && !_isLoading
                 ? const Center(child: Text('No quotations found.'))

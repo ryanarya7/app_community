@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'home_screen.dart';
-import 'categories_screen.dart';
+// import 'categories_screen.dart';
 import 'profile_screen.dart';
 import 'odoo_service.dart';
 import 'sale_order_list_screen.dart';
@@ -11,7 +11,8 @@ class NavigationScreen extends StatefulWidget {
   final OdooService odooService;
   final int initialIndex;
 
-  const NavigationScreen({Key? key, required this.odooService, this.initialIndex = 0})
+  const NavigationScreen(
+      {Key? key, required this.odooService, this.initialIndex = 0})
       : super(key: key);
 
   @override
@@ -28,7 +29,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _selectedIndex = widget.initialIndex; // Set default index
     _pages = [
       HomeScreen(odooService: widget.odooService),
-      CategoriesScreen(odooService: widget.odooService),
+      // CategoriesScreen(odooService: widget.odooService),
       SaleOrderListScreen(odooService: widget.odooService),
       CollectionScreen(odooService: widget.odooService),
       ProfileScreen(odooService: widget.odooService),
@@ -51,10 +52,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation1, animation2) => NavigationScreen(
-              odooService: widget.odooService, // Pastikan odooService diteruskan
+              odooService:
+                  widget.odooService, // Pastikan odooService diteruskan
               initialIndex: arguments, // Tetapkan initialIndex ke argumen
             ),
-            settings: const RouteSettings(arguments: null), // Atur arguments menjadi null
+            settings: const RouteSettings(
+                arguments: null), // Atur arguments menjadi null
           ),
         );
       });
@@ -98,7 +101,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
           },
           items: [
             _buildNavItem(Icons.home, "Home", 0),
-            _buildNavItem(Icons.category, "Categories", 1),
+            // _buildNavItem(Icons.category, "Categories", 1),
             _buildNavItem(Icons.shopping_cart, "Sales Order", 2),
             _buildNavItem(Icons.attach_money, "Collection", 3),
             _buildNavItem(Icons.person, "Profile", 4),
@@ -108,7 +111,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
     );
   }
 
-  BottomNavigationBarItem _buildNavItem(IconData icon, String label, int index) {
+  BottomNavigationBarItem _buildNavItem(
+      IconData icon, String label, int index) {
     return BottomNavigationBarItem(
       icon: Animate(
         target: _selectedIndex == index ? 1 : 0,
