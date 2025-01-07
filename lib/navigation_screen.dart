@@ -77,7 +77,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           gradient: const LinearGradient(
             colors: [Colors.blueAccent, Colors.indigo],
             begin: Alignment.topLeft,
