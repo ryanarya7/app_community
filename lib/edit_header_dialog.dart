@@ -7,10 +7,10 @@ class EditHeaderDialog extends StatefulWidget {
   final OdooService odooService;
 
   const EditHeaderDialog({
-    Key? key,
+    super.key,
     required this.initialData,
     required this.odooService,
-  }) : super(key: key);
+  });
 
   @override
   _EditHeaderDialogState createState() => _EditHeaderDialogState();
@@ -71,12 +71,10 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           orElse: () => {},
         );
 
-        npwpController.text = widget.initialData['npwp'] ?? '';
+        npwpController.text = selectedCustomer?['npwp'] ?? '';
       });
 
-      // Fetch specific addresses based on ID in quotation
       await _fetchInitialAddresses();
-      // Load all addresses for initial customer to prepare dropdown options
       if (selectedCustomer != null) {
         await _loadAddresses(selectedCustomer!['id'], isInitialLoad: true);
       }
@@ -117,6 +115,8 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           (a) => a['id'] == widget.initialData['partner_shipping_id']?[0],
           orElse: () => deliveryAddresses.first,
         );
+
+        _updateNPWP(selectedInvoiceAddress);
       });
     } catch (e) {
       if (!mounted) return;
@@ -124,6 +124,22 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
         SnackBar(content: Text('Error fetching initial addresses: $e')),
       );
     }
+  }
+
+  void _updateNPWP(Map<String, dynamic>? invoiceAddress) {
+    if (invoiceAddress == null) {
+      npwpController.text = '';
+      return;
+    }
+    final invoiceAddressName = invoiceAddress['name'];
+    final matchedCustomer = customers.firstWhere(
+      (customer) => customer['name'] == invoiceAddressName,
+      orElse: () => {},
+    );
+    setState(() {
+      npwpController.text =
+          (matchedCustomer['npwp'] is String) ? matchedCustomer['npwp'] : '';
+    });
   }
 
   Future<void> _loadAddresses(int customerId,
@@ -149,7 +165,6 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               .toList(),
         ];
 
-        // Auto-fill hanya jika bukan load awal
         if (!isInitialLoad) {
           selectedInvoiceAddress = invoiceAddresses.firstWhere(
             (a) => a['type'] == 'invoice',
@@ -161,6 +176,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
             orElse: () => deliveryAddresses.first,
           );
         }
+        _updateNPWP(selectedInvoiceAddress);
       });
     } catch (e) {
       if (!mounted) return;
@@ -182,8 +198,6 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
       'warehouse_id': selectedWarehouse?['id'],
       'npwp': npwpController.text,
     };
-
-    // Periksa hanya field wajib lainnya
     if (headerData['partner_id'] == null ||
         headerData['user_member_id'] == null ||
         headerData['payment_term_id'] == null ||
@@ -193,7 +207,6 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
       );
       return;
     }
-
     try {
       await widget.odooService
           .updateQuotationHeader(widget.initialData['id'], headerData);
@@ -227,7 +240,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           dropdownBuilder: (context, selectedItem) {
             return Text(
               selectedItem?['name'] ?? '',
-              style: const TextStyle(fontSize: 12), // Ukuran font dropdown
+              style: const TextStyle(fontSize: 12), 
             );
           },
           popupProps: PopupProps.menu(
@@ -242,7 +255,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               return ListTile(
                 title: Text(
                   item['name'] ?? '',
-                  style: const TextStyle(fontSize: 12), // Ukuran font pilihan
+                  style: const TextStyle(fontSize: 12), 
                 ),
               );
             },
@@ -270,24 +283,27 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               onChanged: (value) {
                 setState(() {
                   selectedCustomer = value;
-                  npwpController.text =
-                      selectedCustomer?['npwp'] ?? ''; // Update NPWP jika ada
-                  if (value != null) {
-                    _loadAddresses(value[
-                        'id']); // Auto-fill addresses (invoice dan delivery)
-                  }
                 });
+
+                if (value != null) {
+                  _loadAddresses(value['id']);
+                }
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
             _buildDropdown(
               label: "Invoice Address",
               items: invoiceAddresses,
               selectedItem: selectedInvoiceAddress,
-              onChanged: (value) =>
-                  setState(() => selectedInvoiceAddress = value),
+              onChanged: (value) {
+                setState(() {
+                  selectedInvoiceAddress = value;
+                });
+
+                _updateNPWP(value);
+              },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
             _buildDropdown(
               label: "Delivery Address",
               items: deliveryAddresses,
@@ -295,7 +311,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               onChanged: (value) =>
                   setState(() => selectedDeliveryAddress = value),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
             _buildDropdown(
               label: "Salesperson",
               items: salespersons,
@@ -303,34 +319,21 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               onChanged: (_) {},
               isReadOnly: true,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
             _buildDropdown(
               label: "Payment Term",
               items: paymentTerms,
               selectedItem: selectedPaymentTerm,
               onChanged: (value) => setState(() => selectedPaymentTerm = value),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
             _buildDropdown(
               label: "Warehouse",
               items: warehouses,
               selectedItem: selectedWarehouse,
               onChanged: (value) => setState(() => selectedWarehouse = value),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: npwpController,
-              decoration: InputDecoration(
-                label: Text(
-                  "NPWP",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Colors.black),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
           ],
         ),
       ),

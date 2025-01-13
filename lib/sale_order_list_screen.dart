@@ -215,9 +215,54 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 5),
-            Text("Customer: $customer"),
-            Text("Shipping Address: $shippingAddress"),
-            const SizedBox(height: 5),
+            Table(
+              columnWidths: const {
+                0: IntrinsicColumnWidth(), // Kolom label (Customer, Shipping Address)
+                1: FixedColumnWidth(12), // Kolom titik dua ":"
+              },
+              children: [
+                TableRow(
+                  children: [
+                    const Text(
+                      "Customer",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    const Text(
+                      " :",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    Text(
+                      customer,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    SizedBox(height: 8), // Jarak antar baris
+                    SizedBox(),
+                    SizedBox(),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Delivery Address",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    const Text(
+                      " :",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    Text(
+                      shippingAddress,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Text(
               currencyFormatter.format(item['amount_total'] ?? 0),
               style: const TextStyle(
@@ -264,7 +309,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                   borderSide: BorderSide.none,
                 ),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.grey),
             ),
           ),
           actions: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'odoo_service.dart';
 import 'package:intl/intl.dart';
 import 'edit_header_dialog.dart';
@@ -370,7 +371,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text("Select Product"),
+            title: const Text(
+              "Select Product",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
             content: SizedBox(
               width: double.maxFinite,
               height: 400.0,
@@ -379,10 +383,12 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                 itemBuilder: (context, index) {
                   final product = availableProducts[index];
                   return ListTile(
-                    title: Text(product['name']),
+                    title: Text(product['name'],
+                        style: const TextStyle(fontSize: 12)),
                     subtitle: Text(
                       'Price: ${currencyFormatter.format(product['list_price'])}\n'
                       'Available: ${product['qty_available']}',
+                      style: const TextStyle(fontSize: 12),
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.add_circle, color: Colors.green),
@@ -520,6 +526,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
 
             final data = snapshot.data!;
             final customerName = data['partner_id']?[1] ?? 'Unknown';
+            final deliveryAddress =
+                data['partner_shipping_id']?[1] ?? 'Unknown';
+            final dateOrder = data['date_order'] ?? 'Unknown';
             final npwp = data['npwp'] ?? 'N/A';
             final orderLineIds = List<int>.from(data['order_line'] ?? []);
             final totalCost = data['amount_total'] ?? 0.0;
@@ -539,7 +548,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                         child: Text(
                           '${data['name']}',
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -562,18 +571,175 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text('Customer: $customerName'),
-                  Text('NPWP: $npwp'),
-                  Text('Date: ${data['date_order'] ?? 'Unknown'}'),
-                  const Divider(height: 24, thickness: 2),
+                  Table(
+                    columnWidths: const {
+                      0: IntrinsicColumnWidth(), // Kolom label
+                      1: FixedColumnWidth(12), // Kolom titik dua
+                    },
+                    children: [
+                      TableRow(
+                        children: [
+                          const Text(
+                            'Customer',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Text(
+                            ' :',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            customerName,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          const Text(
+                            'Delivery Address',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Text(
+                            ' :',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            deliveryAddress,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          const Text(
+                            'NPWP',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Text(
+                            ' :',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            npwp,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          const Text(
+                            'Date',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Text(
+                            ' :',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            dateOrder,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          const Text(
+                            'Delivery Order',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Text(
+                            ' :',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          FutureBuilder<String>(
+                            future: deliveryOrderStatus,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Text('Loading...',
+                                    style: TextStyle(fontSize: 12));
+                              }
+                              if (snapshot.hasError) {
+                                return const Text('Error',
+                                    style: TextStyle(fontSize: 12));
+                              }
+                              final deliveryStatus =
+                                  snapshot.data ?? 'Not Found';
+                              return Wrap(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 0),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(deliveryStatus),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      _mapDeliveryStatus(deliveryStatus),
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          const Text(
+                            'Invoice',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Text(
+                            ' :',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          FutureBuilder<String>(
+                            future: invoiceStatus,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Text('Loading...',
+                                    style: TextStyle(fontSize: 12));
+                              }
+                              if (snapshot.hasError) {
+                                return const Text('Error',
+                                    style: TextStyle(fontSize: 12));
+                              }
+                              final invoiceState = snapshot.data ?? 'Not Found';
+                              return Wrap(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 0),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(invoiceState),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      _mapInvoiceStatus(invoiceState),
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16, thickness: 1),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         "Order Lines",
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
+                            fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       if (isEditLineMode)
                         Row(
@@ -610,7 +776,6 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 8),
                   Expanded(
                     child: isEditLineMode
                         ? ListView.builder(
@@ -627,7 +792,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        flex: 2,
+                                        flex: 1,
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -635,9 +800,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                             Text(
                                               name,
                                               style: const TextStyle(
-                                                  fontWeight: FontWeight.bold),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12),
                                             ),
-                                            const SizedBox(height: 4),
                                             TextField(
                                               controller:
                                                   _priceControllers[index],
@@ -645,9 +810,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                                   TextInputType.number,
                                               decoration: const InputDecoration(
                                                 labelText: 'Price',
-                                                border: OutlineInputBorder(),
-                                                isDense: true,
+                                                // border: OutlineInputBorder(),
+                                                // isDense: true,
                                               ),
+                                              style:
+                                                  const TextStyle(fontSize: 12),
                                               onChanged: (value) {
                                                 final parsedPrice =
                                                     double.tryParse(value) ??
@@ -681,11 +848,13 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                                 keyboardType:
                                                     TextInputType.number,
                                                 textAlign: TextAlign.center,
-                                                decoration:
-                                                    const InputDecoration(
-                                                  border: OutlineInputBorder(),
-                                                  isDense: true,
-                                                ),
+                                                style: const TextStyle(
+                                                    fontSize: 12),
+                                                // decoration:
+                                                //     const InputDecoration(
+                                                //   border: OutlineInputBorder(),
+                                                //   isDense: true,
+                                                // ),
                                                 onChanged: (value) {
                                                   final parsedQty = int
                                                           .tryParse(value) ??
@@ -755,16 +924,111 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                 itemCount: lines.length,
                                 itemBuilder: (context, index) {
                                   final line = lines[index];
+                                  final qty = line['product_uom_qty'] ?? 0;
+                                  final price = line['price_unit'] ?? 0.0;
+                                  final subtotal = qty * price;
+                                  final productImageBase64 = line[
+                                      'image_1920']; // Gambar produk dalam base64
+
                                   return Card(
                                     margin: const EdgeInsets.symmetric(
                                         vertical: 8.0),
                                     child: ListTile(
+                                      leading: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                            8), // Membulatkan sudut gambar
+                                        child: productImageBase64 != null &&
+                                                productImageBase64 is String
+                                            ? Image.memory(
+                                                base64Decode(
+                                                    productImageBase64),
+                                                width: 50, // Lebar gambar
+                                                height: 50, // Tinggi gambar
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return const Icon(
+                                                      Icons.broken_image,
+                                                      size: 50); // Jika error
+                                                },
+                                              )
+                                            : const Icon(
+                                                Icons.image_not_supported,
+                                                size: 50), // Placeholder
+                                      ),
                                       title: Text(
-                                          line['name'] ?? 'No Description'),
-                                      subtitle: Text(
-                                        'Qty: ${line['product_uom_qty']}\n'
-                                        'Price: ${currencyFormatter.format(line['price_unit'])}\n'
-                                        'Subtotal: ${currencyFormatter.format(line['product_uom_qty'] * line['price_unit'])}',
+                                        line['name'] ?? 'No Description',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 1),
+                                        child: Table(
+                                          columnWidths: const {
+                                            0: IntrinsicColumnWidth(),
+                                            1: FixedColumnWidth(20),
+                                          },
+                                          children: [
+                                            TableRow(
+                                              children: [
+                                                const Text(
+                                                  'Qty',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                const Text(
+                                                  ' : ',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                Text(
+                                                  qty.toString(),
+                                                  style: const TextStyle(
+                                                      fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                            TableRow(
+                                              children: [
+                                                const Text(
+                                                  'Price',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                const Text(
+                                                  ' : ',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                Text(
+                                                  currencyFormatter
+                                                      .format(price),
+                                                  style: const TextStyle(
+                                                      fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                            TableRow(
+                                              children: [
+                                                const Text(
+                                                  'Subtotal',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                const Text(
+                                                  ' : ',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                Text(
+                                                  currencyFormatter
+                                                      .format(subtotal),
+                                                  style: const TextStyle(
+                                                      fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
@@ -773,90 +1037,21 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                             },
                           ),
                   ),
-                  const Divider(height: 24, thickness: 2),
-                  const Text(
-                    'Document Status',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  FutureBuilder<String>(
-                    future: deliveryOrderStatus,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Text('Delivery Order: Loading...');
-                      }
-                      if (snapshot.hasError) {
-                        return const Text(
-                            'Delivery Order: Error fetching status');
-                      }
-                      final deliveryStatus = snapshot.data ?? 'Not Found';
-                      return Row(
-                        children: [
-                          const Text('Delivery Order:'),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(deliveryStatus),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _mapDeliveryStatus(deliveryStatus),
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  FutureBuilder<String>(
-                    future: invoiceStatus,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Text('Invoice: Loading...');
-                      }
-                      if (snapshot.hasError) {
-                        return const Text('Invoice: Error fetching status');
-                      }
-                      final invoiceState = snapshot.data ?? 'Not Found';
-                      return Row(
-                        children: [
-                          const Text('Invoice:'),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(invoiceState),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _mapInvoiceStatus(invoiceState),
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const Divider(height: 24, thickness: 2),
+                  const Divider(height: 16, thickness: 1),
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: 0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           'Total:',
                           style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                              fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           currencyFormatter.format(totalCost),
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                              fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),

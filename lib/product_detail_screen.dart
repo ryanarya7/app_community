@@ -12,7 +12,7 @@ class ProductDetailScreen extends StatelessWidget {
     // Deklarasi Formatter Mata Uang
     final currencyFormatter = NumberFormat.currency(
       locale: 'id_ID', // Format Indonesia
-      symbol: 'Rp ',  // Simbol Rupiah
+      symbol: 'Rp ', // Simbol Rupiah
       decimalDigits: 2,
     );
 
@@ -23,12 +23,15 @@ class ProductDetailScreen extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
+            // Gambar di bagian atas
+            Container(
+              height: 250, // Tinggi tetap untuk gambar
+              width: double.infinity, // Lebar penuh
+              decoration: BoxDecoration(),
               child: product['image_1920'] != null &&
                       product['image_1920'] is String
                   ? Image.memory(
@@ -45,25 +48,50 @@ class ProductDetailScreen extends StatelessWidget {
                     ),
             ),
             const SizedBox(height: 16),
-            Text(
-              product['default_code'] != null &&
+
+            // Detail Produk
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Nama Produk
+                  Text(
+                    product['default_code'] != null &&
                             product['default_code'] != false
                         ? '${product['default_code']} ${product['name']}'
                         : product['name'],
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Harga Produk
+                  Text(
+                    currencyFormatter.format(product['list_price'] ?? 0),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Ketersediaan Produk
+                  Text(
+                    'Available Products: ${product['qty_available']}',
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Deskripsi Produk (jika ada)
+                  if (product['description'] != null)
+                    Text(
+                      product['description'],
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              currencyFormatter.format(product['list_price'] ?? 0),
-              style: const TextStyle(fontSize: 20, color: Colors.green),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Available Products: ${product['qty_available']}',
-              style: const TextStyle(fontSize: 18, color: Colors.black87),
-            ),
-            const SizedBox(height: 8),
-            const SizedBox(height: 16),
           ],
         ),
       ),

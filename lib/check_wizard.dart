@@ -10,13 +10,13 @@ class CheckWizardDialog extends StatefulWidget {
       partnerId; // Tambahkan partner ID untuk menentukan domain checkbook
 
   const CheckWizardDialog({
-    Key? key,
+    super.key,
     required this.odooService,
     required this.invoiceId,
     required this.invoiceName,
     required this.initialAmount,
     required this.partnerId,
-  }) : super(key: key);
+  });
 
   @override
   _CheckWizardDialogState createState() => _CheckWizardDialogState();
@@ -76,7 +76,7 @@ class _CheckWizardDialogState extends State<CheckWizardDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('${widget.invoiceName}'),
+      title: Text(widget.invoiceName),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

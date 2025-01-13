@@ -1,8 +1,14 @@
-# Please add these rules to your existing keep rules in order to suppress warnings.
-# This is generated automatically by the Android Gradle plugin.
--dontwarn com.google.errorprone.annotations.CanIgnoreReturnValue
--dontwarn com.google.errorprone.annotations.CheckReturnValue
--dontwarn com.google.errorprone.annotations.Immutable
--dontwarn com.google.errorprone.annotations.RestrictedApi
 -dontwarn javax.annotation.Nullable
 -dontwarn javax.annotation.concurrent.GuardedBy
+-dontwarn com.google.android.play.**
+-keep class com.google.android.play.** { *; }
+-keep class com.google.android.play.core.splitinstall.** { *; }
+-keep class com.google.android.play.core.tasks.** { *; }
+-keep class odoo.** { *; }
+-keep class org.apache.http.** { *; }
+-keep class io.flutter.** { *; }
+-keep class io.flutter.embedding.** { *; }
+-keep class com.odoo.** { *; }
+-keep class org.apache.xmlrpc.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*

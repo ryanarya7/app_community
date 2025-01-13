@@ -244,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       product['name'] ?? 'Unknown Product',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -256,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: const TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                     // Ketersediaan
@@ -335,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? '${product['default_code']} ${product['name']}'
                         : product['name'],
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Colors.black87,
                     ),
                     maxLines: 2,
@@ -348,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: const TextStyle(
                       color: Colors.green,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                   // Ketersediaan Produk
@@ -356,8 +356,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Available: ${product['qty_available'] ?? 0}',
                     style: const TextStyle(
                       color: Colors.black54,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
+                    maxLines: 1,
                   ),
                 ],
               ),
@@ -428,11 +429,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? GridView.builder(
                         padding: const EdgeInsets.all(10),
                         gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent:
+                              200, // Lebar maksimal setiap tile/card
+                          mainAxisSpacing: 10, // Jarak antar baris
+                          crossAxisSpacing: 10, // Jarak antar kolom
+                          childAspectRatio:
+                              0.7, // Rasio aspek tile (lebar:tinggi)
                         ),
                         itemCount: _filteredProducts.length,
                         itemBuilder: (context, index) {

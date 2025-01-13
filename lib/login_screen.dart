@@ -85,6 +85,8 @@ class _LoginScreenState extends State<LoginScreen>
         _isError = true; // Set error state untuk animasi getar dan field merah
         _errorMessage = "Invalid credentials or user not found. Please try again.";
         _isLoginSuccess = false; // Tetap tampilkan ikon default jika gagal
+        print("Login error: $e");
+        
       });
 
       // Jalankan animasi getar pada field

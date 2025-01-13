@@ -5,8 +5,7 @@ import 'products_category_screen.dart';
 class CategoriesScreen extends StatefulWidget {
   final OdooService odooService;
 
-  const CategoriesScreen({Key? key, required this.odooService})
-      : super(key: key);
+  const CategoriesScreen({super.key, required this.odooService});
 
   @override
   _CategoriesScreenState createState() => _CategoriesScreenState();

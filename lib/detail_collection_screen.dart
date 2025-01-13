@@ -6,8 +6,7 @@ import 'check_wizard.dart';
 class DetailCollectionScreen extends StatefulWidget {
   final OdooService odooService;
 
-  const DetailCollectionScreen({Key? key, required this.odooService})
-      : super(key: key);
+  const DetailCollectionScreen({super.key, required this.odooService});
 
   @override
   _DetailCollectionScreenState createState() => _DetailCollectionScreenState();
@@ -157,7 +156,7 @@ class _DetailCollectionScreenState extends State<DetailCollectionScreen> {
                               ),
                             ),
                             // Spacer untuk mendorong Transfer Date ke kanan
-                            Spacer(),
+                            const Spacer(),
                             // Text Transfer Date (Kanan)
                             Text(
                               '${detail['transfer_date'] ?? 'N/A'}',

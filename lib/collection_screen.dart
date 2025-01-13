@@ -4,8 +4,7 @@ import 'odoo_service.dart';
 class CollectionScreen extends StatefulWidget {
   final OdooService odooService;
 
-  const CollectionScreen({Key? key, required this.odooService})
-      : super(key: key);
+  const CollectionScreen({super.key, required this.odooService});
 
   @override
   _CollectionScreenState createState() => _CollectionScreenState();

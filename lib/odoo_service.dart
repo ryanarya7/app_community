@@ -498,7 +498,8 @@ class OdooService {
             'id',
             'name',
             'street',
-            'type'
+            'type',
+            'npwp'
           ], // Dapatkan ID, nama, alamat, dan tipe
         },
       });
