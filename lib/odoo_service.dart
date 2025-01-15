@@ -262,7 +262,15 @@ class OdooService {
         'method': 'search_read',
         'args': [],
         'kwargs': {
-          'fields': ['id', 'name', 'street', 'phone', 'vat', 'npwp'],
+          'fields': [
+            'id',
+            'name',
+            'street',
+            'phone',
+            'vat',
+            'npwp',
+            'property_payment_term_id'
+          ],
         },
       });
       return List<Map<String, dynamic>>.from(response);
@@ -309,20 +317,13 @@ class OdooService {
     try {
       final linePayload = {
         'order_id': quotationId,
-        'name': lineData['name'], // Description or Note
-        'display_type': lineData['display_type'], // 'line_note' for notes
+        'product_id': lineData['product_id'],
+        'product_template_id': lineData['product_template_id'],
+        'product_uom_qty': lineData['product_uom_qty'],
+        'product_uom': lineData['product_uom'],
+        'price_unit': lineData['price_unit'],
+        'name': lineData['name'], // Deskripsi produk
       };
-
-      if (lineData['display_type'] != 'line_note') {
-        // Hanya tambahkan field ini untuk produk normal
-        linePayload.addAll({
-          'product_id': lineData['product_id'],
-          'product_template_id': lineData['product_template_id'],
-          'product_uom_qty': lineData['product_uom_qty'],
-          'product_uom': lineData['product_uom'],
-          'price_unit': lineData['price_unit'],
-        });
-      }
 
       await _client.callKw({
         'model': 'sale.order.line',
@@ -430,10 +431,11 @@ class OdooService {
             'user_id',
             'order_line', // Order Lines
             'payment_term_id',
-            'npwp', // Tax Number
+            'npwp',
             'warehouse_id',
             'date_order', // Quotation Date
             'amount_total',
+            'amount_untaxed', // Untaxed Amount
             'state',
             'user_member_id'
           ],
@@ -517,20 +519,24 @@ class OdooService {
         'method': 'search_read',
         'args': [
           [
-            ['origin', '=', saleOrderName]
+            ['origin', '=', saleOrderName],
           ]
         ],
         'kwargs': {
-          'fields': ['state'],
+          'fields': ['state', 'name'],
           'limit': 1,
         },
       });
 
+      print('Response from Odoo: $response'); // Debug response
+
       if (response.isNotEmpty) {
-        return response[0]['state'] ?? 'unknown';
+        final state = response[0]['state'];
+        return state ?? 'unknown';
       }
       return 'not_found';
     } catch (e) {
+      print('Error: $e'); // Debug error
       throw Exception('Failed to fetch delivery order status: $e');
     }
   }
@@ -551,7 +557,7 @@ class OdooService {
           'limit': 1,
         },
       });
-
+      print('Response from Odoo: $response'); // Debug response
       if (response.isNotEmpty) {
         return response[0]['payment_state'] ?? 'unknown';
       }

@@ -27,6 +27,8 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   Map<String, dynamic>? selectedInvoiceAddress;
   Map<String, dynamic>? selectedDeliveryAddress;
 
+  bool showSalespersonField = false;
+
   @override
   void initState() {
     super.initState();
@@ -78,28 +80,45 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
           await widget.odooService.fetchCustomerAddresses(customerId);
 
       if (!mounted) return;
+
       setState(() {
-        filteredInvoiceAddresses =
-            fetchedAddresses.where((a) => a['type'] == 'invoice').toList();
-        filteredDeliveryAddresses =
-            fetchedAddresses.where((a) => a['type'] == 'delivery').toList();
-
-        if (filteredInvoiceAddresses.isEmpty) {
-          filteredInvoiceAddresses.add({
+        // Filter hanya alamat dengan tipe invoice dan delivery
+        filteredInvoiceAddresses = [
+          {
             'id': selectedCustomer?['id'],
             'name': selectedCustomer?['name'],
-          });
-        }
+          },
+          ...fetchedAddresses.where((a) => a['type'] == 'invoice').toList(),
+        ];
 
-        if (filteredDeliveryAddresses.isEmpty) {
-          filteredDeliveryAddresses.add({
+        filteredDeliveryAddresses = [
+          {
             'id': selectedCustomer?['id'],
             'name': selectedCustomer?['name'],
-          });
-        }
+          },
+          ...fetchedAddresses.where((a) => a['type'] == 'delivery').toList(),
+        ];
 
-        selectedInvoiceAddress = filteredInvoiceAddresses.first;
-        selectedDeliveryAddress = filteredDeliveryAddresses.first;
+        // Pilih alamat default yang sesuai dengan tipe, jika tidak ada pilih yang pertama
+        selectedInvoiceAddress = filteredInvoiceAddresses.firstWhere(
+          (a) => a['type'] == 'invoice',
+          orElse: () => filteredInvoiceAddresses.isNotEmpty
+              ? filteredInvoiceAddresses.first
+              : {},
+        );
+
+        selectedDeliveryAddress = filteredDeliveryAddresses.firstWhere(
+          (a) => a['type'] == 'delivery',
+          orElse: () => filteredDeliveryAddresses.isNotEmpty
+              ? filteredDeliveryAddresses.first
+              : {},
+        );
+      });
+
+      // Perbarui NPWP sesuai Invoice Address yang terpilih
+      final npwp = await _getNpwpFromInvoiceAddress(selectedInvoiceAddress);
+      setState(() {
+        selectedCustomer?['npwp'] = npwp;
       });
     } catch (e) {
       if (!mounted) return;
@@ -146,11 +165,53 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
     }
   }
 
+  void _fillPaymentTermFromCustomer(Map<String, dynamic> customer) {
+    // Periksa apakah `property_payment_term_id` ada dan merupakan List
+    if (customer.containsKey('property_payment_term_id') &&
+        customer['property_payment_term_id'] is List &&
+        customer['property_payment_term_id'].isNotEmpty) {
+      final paymentTermId = customer['property_payment_term_id'][0]; // Ambil ID
+
+      final matchedPaymentTerm = paymentTerms.firstWhere(
+        (term) => term['id'] == paymentTermId,
+        orElse: () => {},
+      );
+
+      setState(() {
+        selectedPaymentTerm = matchedPaymentTerm;
+      });
+    } else {
+      // Reset jika `property_payment_term_id` kosong atau tidak valid
+      setState(() {
+        selectedPaymentTerm = null;
+      });
+    }
+  }
+
+  Future<String?> _getNpwpFromInvoiceAddress(
+      Map<String, dynamic>? invoiceAddress) async {
+    if (invoiceAddress == null) return null;
+
+    // Jika Invoice Address sama dengan Customer, gunakan NPWP Customer
+    if (invoiceAddress['id'] == selectedCustomer?['id']) {
+      return selectedCustomer?['npwp'];
+    }
+
+    // Cari NPWP berdasarkan Invoice Address
+    final matchedAddress = globalAddresses.firstWhere(
+      (address) => address['id'] == invoiceAddress['id'],
+      orElse: () => {},
+    );
+
+    return matchedAddress['npwp'] ?? null;
+  }
+
   Widget _buildStyledDropdown({
     required String label,
     required List<Map<String, dynamic>> items,
     required Map<String, dynamic>? selectedItem,
-    required ValueChanged<Map<String, dynamic>?> onChanged,
+    required ValueChanged<Map<String, dynamic>?>? onChanged,
+    bool enabled = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,9 +219,9 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.blueGrey,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 8),
@@ -168,13 +229,31 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
           items: items,
           selectedItem: selectedItem,
           itemAsString: (item) => item['name'] ?? '',
-          onChanged: onChanged,
+          onChanged: enabled ? onChanged : null, // Nonaktifkan jika tidak aktif
           popupProps: PopupProps.menu(
             showSearchBox: true,
             searchFieldProps: const TextFieldProps(
               decoration: InputDecoration(
                 labelText: 'Search',
                 border: OutlineInputBorder(),
+              ),
+            ),
+            disabledItemFn: (item) =>
+                !enabled, // Nonaktifkan item jika dropdown nonaktif
+          ),
+          dropdownDecoratorProps: DropDownDecoratorProps(
+            dropdownSearchDecoration: InputDecoration(
+              filled: true,
+              fillColor:
+                  enabled ? Colors.white : Colors.grey[200], // Warna latar
+              enabledBorder: OutlineInputBorder(
+                borderSide:
+                    BorderSide(color: enabled ? Colors.blue : Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
@@ -207,43 +286,57 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
                   });
                   if (value != null) {
                     _loadChildAddresses(value['id']);
+                    _fillPaymentTermFromCustomer(value);
                   }
                 },
               ),
               const SizedBox(height: 16),
               _buildStyledDropdown(
                 label: "Invoice Address",
-                items: globalAddresses + filteredInvoiceAddresses,
+                items: filteredInvoiceAddresses,
                 selectedItem: selectedInvoiceAddress,
-                onChanged: (value) {
-                  setState(() {
-                    selectedInvoiceAddress = value;
-                  });
-                },
+                onChanged: selectedCustomer != null
+                    ? (value) async {
+                        setState(() {
+                          selectedInvoiceAddress = value;
+                        });
+
+                        // Perbarui NPWP berdasarkan Invoice Address
+                        final npwp = await _getNpwpFromInvoiceAddress(value);
+                        setState(() {
+                          selectedCustomer?['npwp'] = npwp;
+                        });
+                      }
+                    : null, // Nonaktifkan jika Customer belum dipilih
+                enabled: selectedCustomer != null, // Tentukan status aktif
               ),
               const SizedBox(height: 16),
               _buildStyledDropdown(
                 label: "Delivery Address",
-                items: globalAddresses + filteredDeliveryAddresses,
+                items: filteredDeliveryAddresses,
                 selectedItem: selectedDeliveryAddress,
-                onChanged: (value) {
-                  setState(() {
-                    selectedDeliveryAddress = value;
-                  });
-                },
+                onChanged: selectedCustomer != null
+                    ? (value) {
+                        setState(() {
+                          selectedDeliveryAddress = value;
+                        });
+                      }
+                    : null, // Nonaktifkan jika Customer belum dipilih
+                enabled: selectedCustomer != null, // Tentukan status aktif
               ),
               const SizedBox(height: 16),
-              _buildStyledDropdown(
-                label: "Salesperson",
-                items: salespersons,
-                selectedItem: selectedSalesperson,
-                onChanged: (value) {
-                  setState(() {
-                    selectedSalesperson = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
+              if (showSalespersonField) // Hanya tampilkan jika true
+                _buildStyledDropdown(
+                  label: "Salesperson",
+                  items: salespersons,
+                  selectedItem: selectedSalesperson,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSalesperson = value;
+                    });
+                  },
+                ),
+              // const SizedBox(height: 16),
               _buildStyledDropdown(
                 label: "Payment Term",
                 items: paymentTerms,

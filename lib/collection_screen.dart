@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
+import 'package:intl/intl.dart';
 
 class CollectionScreen extends StatefulWidget {
   final OdooService odooService;
@@ -146,7 +147,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                             Text(
                               collection['name'] ?? 'Unknown',
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -160,7 +161,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                collection['state'] ?? 'Unknown',
+                                _getStateDisplayName(collection['state']),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -169,20 +170,76 @@ class _CollectionScreenState extends State<CollectionScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Created By: ${collection['create_uid']?[1] ?? 'N/A'}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Created At: ${collection['create_date'] ?? 'N/A'}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Transfer Date: ${collection['transfer_date'] ?? 'N/A'}',
-                          style: const TextStyle(fontSize: 14),
+                        Table(
+                          columnWidths: const {
+                            0: IntrinsicColumnWidth(),
+                            1: FixedColumnWidth(20),
+                            2: FlexColumnWidth(),
+                          },
+                          children: [
+                            TableRow(
+                              children: [
+                                const Text(
+                                  "Created By",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                const Text(
+                                  " :",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Text(
+                                  collection['create_uid']?[1] ?? 'N/A',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                            const TableRow(
+                              children: [
+                                SizedBox(height: 2), // Jarak antar baris
+                                SizedBox(),
+                                SizedBox(),
+                              ],
+                            ),
+                            TableRow(
+                              children: [
+                                const Text(
+                                  "Created At",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                const Text(
+                                  " :",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Text(
+                                  collection['create_date'] ?? 'N/A',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                            const TableRow(
+                              children: [
+                                SizedBox(height: 2),
+                                SizedBox(),
+                                SizedBox(),
+                              ],
+                            ),
+                            TableRow(
+                              children: [
+                                const Text(
+                                  "Transfer Date",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                const Text(
+                                  " :",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Text(
+                                  collection['transfer_date'] ?? 'N/A',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -211,5 +268,10 @@ class _CollectionScreenState extends State<CollectionScreen> {
       default:
         return Colors.black54;
     }
+  }
+
+  String _getStateDisplayName(String? state) {
+    if (state == null) return 'Unknown';
+    return toBeginningOfSentenceCase(state.toLowerCase()) ?? state;
   }
 }

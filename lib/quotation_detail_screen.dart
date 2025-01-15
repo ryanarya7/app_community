@@ -529,8 +529,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
             final deliveryAddress =
                 data['partner_shipping_id']?[1] ?? 'Unknown';
             final dateOrder = data['date_order'] ?? 'Unknown';
-            final npwp = data['npwp'] ?? 'N/A';
+            final npwp = (data['npwp'] is String && data['npwp']!.isNotEmpty)
+                ? data['npwp']
+                : '';
             final orderLineIds = List<int>.from(data['order_line'] ?? []);
+            final untaxedAmount = data['amount_untaxed'] ?? 0.0;
             final totalCost = data['amount_total'] ?? 0.0;
             final state = data['state'] ?? 'Unknown';
             orderLines = widget.odooService.fetchOrderLines(orderLineIds);
@@ -641,95 +644,98 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                           ),
                         ],
                       ),
-                      TableRow(
-                        children: [
-                          const Text(
-                            'Delivery Order',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          const Text(
-                            ' :',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          FutureBuilder<String>(
-                            future: deliveryOrderStatus,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Text('Loading...',
-                                    style: TextStyle(fontSize: 12));
-                              }
-                              if (snapshot.hasError) {
-                                return const Text('Error',
-                                    style: TextStyle(fontSize: 12));
-                              }
-                              final deliveryStatus =
-                                  snapshot.data ?? 'Not Found';
-                              return Wrap(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 0),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(deliveryStatus),
-                                      borderRadius: BorderRadius.circular(8),
+                      if (state != 'draft' && state != 'cancel')
+                        TableRow(
+                          children: [
+                            const Text(
+                              'Delivery Order',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            const Text(
+                              ' :',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            FutureBuilder<String>(
+                              future: deliveryOrderStatus,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Text('Loading...',
+                                      style: TextStyle(fontSize: 12));
+                                }
+                                if (snapshot.hasError) {
+                                  return Text('Error: ${snapshot.error}',
+                                      style: TextStyle(fontSize: 12));
+                                }
+                                final deliveryStatus =
+                                    snapshot.data ?? 'Not Found';
+                                return Wrap(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 0),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(deliveryStatus),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        _mapDeliveryStatus(deliveryStatus),
+                                        style: const TextStyle(
+                                            color: Colors.white, fontSize: 12),
+                                      ),
                                     ),
-                                    child: Text(
-                                      _mapDeliveryStatus(deliveryStatus),
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 12),
+                                  ],
+                                );
+                              },
+                            )
+                          ],
+                        ),
+                      if (state != 'draft' && state != 'cancel')
+                        TableRow(
+                          children: [
+                            const Text(
+                              'Invoice',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            const Text(
+                              ' :',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            FutureBuilder<String>(
+                              future: invoiceStatus,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Text('Loading...',
+                                      style: TextStyle(fontSize: 12));
+                                }
+                                if (snapshot.hasError) {
+                                  return const Text('Error',
+                                      style: TextStyle(fontSize: 12));
+                                }
+                                final invoiceState =
+                                    snapshot.data ?? 'Not Found';
+                                return Wrap(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 0),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(invoiceState),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        _mapInvoiceStatus(invoiceState),
+                                        style: const TextStyle(
+                                            color: Colors.white, fontSize: 12),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          const Text(
-                            'Invoice',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          const Text(
-                            ' :',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          FutureBuilder<String>(
-                            future: invoiceStatus,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Text('Loading...',
-                                    style: TextStyle(fontSize: 12));
-                              }
-                              if (snapshot.hasError) {
-                                return const Text('Error',
-                                    style: TextStyle(fontSize: 12));
-                              }
-                              final invoiceState = snapshot.data ?? 'Not Found';
-                              return Wrap(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 0),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(invoiceState),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      _mapInvoiceStatus(invoiceState),
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 12),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                                  ],
+                                );
+                              },
+                            ) // Invisible placeholder
+                          ],
+                        ),
                     ],
                   ),
                   const Divider(height: 16, thickness: 1),
@@ -965,7 +971,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                         child: Table(
                                           columnWidths: const {
                                             0: IntrinsicColumnWidth(),
-                                            1: FixedColumnWidth(20),
+                                            1: FixedColumnWidth(12),
                                           },
                                           children: [
                                             TableRow(
@@ -1037,21 +1043,51 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                             },
                           ),
                   ),
-                  const Divider(height: 16, thickness: 1),
                   Padding(
-                    padding: const EdgeInsets.only(top: 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Total:',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          currencyFormatter.format(totalCost),
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold),
+                        // Existing fields...
+                        const Divider(height: 16, thickness: 1),
+                        Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Untaxed Amount:',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  currencyFormatter.format(untaxedAmount),
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total:',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  currencyFormatter.format(totalCost),
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),

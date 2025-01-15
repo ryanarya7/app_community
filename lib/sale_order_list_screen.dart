@@ -173,7 +173,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                     name,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -205,7 +205,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
             Text(
               dateOrder,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 color: Colors.grey,
               ),
             ),
@@ -214,7 +214,7 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 5),
+            const SizedBox(height: 2),
             Table(
               columnWidths: const {
                 0: IntrinsicColumnWidth(), // Kolom label (Customer, Shipping Address)
@@ -225,21 +225,21 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                   children: [
                     const Text(
                       "Customer",
-                      style: TextStyle(fontSize: 14),
+                      style: TextStyle(fontSize: 12),
                     ),
                     const Text(
                       " :",
-                      style: TextStyle(fontSize: 14),
+                      style: TextStyle(fontSize: 12),
                     ),
                     Text(
                       customer,
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
                 const TableRow(
                   children: [
-                    SizedBox(height: 8), // Jarak antar baris
+                    SizedBox(height: 2), // Jarak antar baris
                     SizedBox(),
                     SizedBox(),
                   ],
@@ -247,28 +247,28 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                 TableRow(
                   children: [
                     const Text(
-                      "Delivery Address",
-                      style: TextStyle(fontSize: 14),
+                      "Delivery addr",
+                      style: TextStyle(fontSize: 12),
                     ),
                     const Text(
                       " :",
-                      style: TextStyle(fontSize: 14),
+                      style: TextStyle(fontSize: 12),
                     ),
                     Text(
                       shippingAddress,
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 2),
             Text(
               currencyFormatter.format(item['amount_total'] ?? 0),
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                  fontSize: 12),
             ),
           ],
         ),
