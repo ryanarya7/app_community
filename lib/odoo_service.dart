@@ -268,7 +268,6 @@ class OdooService {
             'street',
             'phone',
             'vat',
-            'npwp',
             'property_payment_term_id'
           ],
         },
@@ -431,7 +430,7 @@ class OdooService {
             'user_id',
             'order_line', // Order Lines
             'payment_term_id',
-            'npwp',
+            'vat',
             'warehouse_id',
             'date_order', // Quotation Date
             'amount_total',
@@ -501,7 +500,7 @@ class OdooService {
             'name',
             'street',
             'type',
-            'npwp'
+            'vat'
           ], // Dapatkan ID, nama, alamat, dan tipe
         },
       });

@@ -30,7 +30,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
   Map<String, dynamic>? selectedSalesperson;
   Map<String, dynamic>? selectedPaymentTerm;
   Map<String, dynamic>? selectedWarehouse;
-  TextEditingController npwpController = TextEditingController();
+  TextEditingController vatController = TextEditingController();
 
   @override
   void initState() {
@@ -71,7 +71,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           orElse: () => {},
         );
 
-        npwpController.text = selectedCustomer?['npwp'] ?? '';
+        vatController.text = _getValidVat(selectedCustomer?['vat']);
       });
 
       await _fetchInitialAddresses();
@@ -116,7 +116,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           orElse: () => deliveryAddresses.first,
         );
 
-        _updateNPWP(selectedInvoiceAddress);
+        _updatevat(selectedInvoiceAddress);
       });
     } catch (e) {
       if (!mounted) return;
@@ -126,20 +126,55 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
     }
   }
 
-  void _updateNPWP(Map<String, dynamic>? invoiceAddress) {
+  void _updatevat(Map<String, dynamic>? invoiceAddress) {
     if (invoiceAddress == null) {
-      npwpController.text = '';
+      setState(() {
+        vatController.text = '0000000000000000';
+      });
+      _showVatWarning();
       return;
     }
+
     final invoiceAddressName = invoiceAddress['name'];
-    final matchedCustomer = customers.firstWhere(
-      (customer) => customer['name'] == invoiceAddressName,
-      orElse: () => {},
+
+    // Jika alamat invoice sama dengan customer, gunakan VAT dari selectedCustomer
+    if (invoiceAddress['id'] == selectedCustomer?['id']) {
+      setState(() {
+        vatController.text = _getValidVat(selectedCustomer?['vat']);
+      });
+    } else {
+      // Jika alamat berbeda, cari data customer berdasarkan invoice address
+      final matchedCustomer = customers.firstWhere(
+        (customer) => customer['name'] == invoiceAddressName,
+        orElse: () =>
+            {'vat': '0000000000000000'}, // Default VAT jika tidak ditemukan
+      );
+
+      setState(() {
+        vatController.text = _getValidVat(matchedCustomer['vat']);
+      });
+    }
+
+    if (vatController.text == '0000000000000000') {
+      _showVatWarning();
+    }
+  }
+
+  String _getValidVat(dynamic vat) {
+    if (vat == null || vat == false || (vat is String && vat.isEmpty)) {
+      return '0000000000000000'; // Set default jika VAT kosong
+    }
+    return vat.toString();
+  }
+
+  void _showVatWarning() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+            'Warning: VAT is missing or invalid for the selected invoice address.'),
+        backgroundColor: Colors.orange,
+      ),
     );
-    setState(() {
-      npwpController.text =
-          (matchedCustomer['npwp'] is String) ? matchedCustomer['npwp'] : '';
-    });
   }
 
   Future<void> _loadAddresses(int customerId,
@@ -176,7 +211,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
             orElse: () => deliveryAddresses.first,
           );
         }
-        _updateNPWP(selectedInvoiceAddress);
+        _updatevat(selectedInvoiceAddress);
       });
     } catch (e) {
       if (!mounted) return;
@@ -196,8 +231,15 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
       'user_member_id': selectedSalesperson?['id'],
       'payment_term_id': selectedPaymentTerm?['id'],
       'warehouse_id': selectedWarehouse?['id'],
-      'npwp': npwpController.text,
     };
+    final vatValue = vatController.text.trim();
+    if (vatValue.isEmpty ||
+        vatValue.length != 16 ||
+        vatValue == '0000000000000000') {
+      headerData['vat'] = '0000000000000000';
+    } else {
+      headerData['vat'] = vatValue;
+    }
     if (headerData['partner_id'] == null ||
         headerData['user_member_id'] == null ||
         headerData['payment_term_id'] == null ||
@@ -240,7 +282,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           dropdownBuilder: (context, selectedItem) {
             return Text(
               selectedItem?['name'] ?? '',
-              style: const TextStyle(fontSize: 12), 
+              style: const TextStyle(fontSize: 12),
             );
           },
           popupProps: PopupProps.menu(
@@ -255,7 +297,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
               return ListTile(
                 title: Text(
                   item['name'] ?? '',
-                  style: const TextStyle(fontSize: 12), 
+                  style: const TextStyle(fontSize: 12),
                 ),
               );
             },
@@ -300,7 +342,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
                   selectedInvoiceAddress = value;
                 });
 
-                _updateNPWP(value);
+                _updatevat(value);
               },
             ),
             const SizedBox(height: 5),

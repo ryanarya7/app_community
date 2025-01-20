@@ -529,8 +529,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
             final deliveryAddress =
                 data['partner_shipping_id']?[1] ?? 'Unknown';
             final dateOrder = data['date_order'] ?? 'Unknown';
-            final npwp = (data['npwp'] is String && data['npwp']!.isNotEmpty)
-                ? data['npwp']
+            final vat = (data['vat'] is String && data['vat']!.isNotEmpty)
+                ? data['vat']
                 : '';
             final orderLineIds = List<int>.from(data['order_line'] ?? []);
             final untaxedAmount = data['amount_untaxed'] ?? 0.0;
@@ -623,7 +623,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                             style: TextStyle(fontSize: 12),
                           ),
                           Text(
-                            npwp,
+                            vat,
                             style: const TextStyle(fontSize: 12),
                           ),
                         ],

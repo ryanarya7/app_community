@@ -29,18 +29,21 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(odooService: odooService),
         '/home': (context) => NavigationScreen(odooService: odooService),
         '/formDetail': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          return FormDetailQuotation(odooService: odooService, headerData: args);
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return FormDetailQuotation(
+              odooService: odooService, headerData: args);
         },
-        '/saleOrderList': (context) => SaleOrderListScreen(odooService: odooService),
+        '/saleOrderList': (context) =>
+            SaleOrderListScreen(odooService: odooService),
         '/quotationDetail': (context) => QuotationDetailScreen(
               odooService: odooService,
               quotationId: ModalRoute.of(context)!.settings.arguments as int,
             ),
         // '/formCollection': (context) => FormCollectionScreen(odooService: odooService),
         '/collectionDetail': (context) => DetailCollectionScreen(
-          odooService: odooService,
-        ),
+              odooService: odooService,
+            ),
       },
     );
   }

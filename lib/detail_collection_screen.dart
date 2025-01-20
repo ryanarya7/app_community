@@ -486,6 +486,72 @@ class _DetailCollectionScreenState extends State<DetailCollectionScreen> {
                                               TableRow(
                                                 children: [
                                                   const Text(
+                                                    "Receipt Via",
+                                                    style:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
+                                                  const Text(
+                                                    " :",
+                                                    style:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
+                                                  Text(
+                                                    invoice['receipt_via'] ??
+                                                        'Unknown',
+                                                    style: const TextStyle(
+                                                        fontSize: 12),
+                                                  ),
+                                                ],
+                                              ),
+                                              const TableRow(
+                                                children: [
+                                                  SizedBox(height: 4),
+                                                  SizedBox(),
+                                                  SizedBox(),
+                                                ],
+                                              ),
+                                              TableRow(
+                                                children: [
+                                                  const Text(
+                                                    "Check",
+                                                    style:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
+                                                  const Text(
+                                                    " :",
+                                                    style:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
+                                                  Expanded(
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          (invoice[
+                                                                  'check_payment_invoice'])
+                                                              ? Icons.check
+                                                              : Icons.close,
+                                                          color: (invoice[
+                                                                      'check_payment_invoice'] ==
+                                                                  true)
+                                                              ? Colors.green
+                                                              : Colors.red,
+                                                          size: 16,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const TableRow(
+                                                children: [
+                                                  SizedBox(height: 4),
+                                                  SizedBox(),
+                                                  SizedBox(),
+                                                ],
+                                              ),
+                                              TableRow(
+                                                children: [
+                                                  const Text(
                                                     "Amount Payment",
                                                     style:
                                                         TextStyle(fontSize: 12),

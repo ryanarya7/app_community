@@ -27,6 +27,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   Map<String, dynamic>? selectedInvoiceAddress;
   Map<String, dynamic>? selectedDeliveryAddress;
 
+  String? customervat;
   bool showSalespersonField = false;
 
   @override
@@ -115,10 +116,11 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
         );
       });
 
-      // Perbarui NPWP sesuai Invoice Address yang terpilih
-      final npwp = await _getNpwpFromInvoiceAddress(selectedInvoiceAddress);
+      // Perbarui Vat sesuai Invoice Address yang terpilih
+      final vat = await _getvatFromInvoiceAddress(selectedInvoiceAddress);
       setState(() {
-        selectedCustomer?['npwp'] = npwp;
+        selectedCustomer?['vat'] = vat;
+        customervat = vat;
       });
     } catch (e) {
       if (!mounted) return;
@@ -149,8 +151,12 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
         'user_member_id': selectedSalesperson!['id'],
         'payment_term_id': selectedPaymentTerm!['id'],
         'warehouse_id': selectedWarehouse!['id'],
-        'npwp': selectedCustomer!['npwp'],
       };
+      if (customervat != '0000000000000000' && customervat!.isEmpty) {
+        headerData['vat'] = customervat;
+      } else {
+        headerData['vat'] = '0000000000000000';
+      }
 
       final quotationId =
           await widget.odooService.createQuotationHeader(headerData);
@@ -188,22 +194,48 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
     }
   }
 
-  Future<String?> _getNpwpFromInvoiceAddress(
+  Future<String?> _getvatFromInvoiceAddress(
       Map<String, dynamic>? invoiceAddress) async {
-    if (invoiceAddress == null) return null;
-
-    // Jika Invoice Address sama dengan Customer, gunakan NPWP Customer
-    if (invoiceAddress['id'] == selectedCustomer?['id']) {
-      return selectedCustomer?['npwp'];
+    if (invoiceAddress == null) {
+      _showVatWarning();
+      return '0000000000000000';
     }
 
-    // Cari NPWP berdasarkan Invoice Address
+    // Jika Invoice Address sama dengan Customer, gunakan Vat Customer
+    if (invoiceAddress['id'] == selectedCustomer?['id']) {
+      final vat = selectedCustomer?['vat'];
+
+      if (vat == null || vat == false || vat == '') {
+        _showVatWarning();
+        return '0000000000000000';
+      }
+
+      return vat.toString(); // Pastikan nilai selalu berupa string
+    }
+
     final matchedAddress = globalAddresses.firstWhere(
       (address) => address['id'] == invoiceAddress['id'],
-      orElse: () => {},
+      orElse: () => {'vat': ''}, // Default jika tidak ditemukan
     );
 
-    return matchedAddress['npwp'] ?? null;
+    final vat = matchedAddress['vat'];
+
+    if (vat == null || vat == false || vat == '') {
+      _showVatWarning();
+      return '0000000000000000';
+    }
+
+    return vat
+        .toString(); // Konversi VAT menjadi string untuk menghindari error
+  }
+
+  void _showVatWarning() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Warning: VAT is missing for the selected customer.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   Widget _buildStyledDropdown({
@@ -301,10 +333,10 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
                           selectedInvoiceAddress = value;
                         });
 
-                        // Perbarui NPWP berdasarkan Invoice Address
-                        final npwp = await _getNpwpFromInvoiceAddress(value);
+                        // Perbarui Vat berdasarkan Invoice Address
+                        final vat = await _getvatFromInvoiceAddress(value);
                         setState(() {
-                          selectedCustomer?['npwp'] = npwp;
+                          selectedCustomer?['vat'] = vat;
                         });
                       }
                     : null, // Nonaktifkan jika Customer belum dipilih

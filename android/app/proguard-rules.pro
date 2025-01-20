@@ -5,8 +5,10 @@
 -keep class com.google.android.play.core.splitinstall.** { *; }
 -keep class com.google.android.play.core.tasks.** { *; }
 -keep class odoo.** { *; }
--keep class org.apache.http.** { *; }
+-keep class okhttp3.** { *; }
+-dontwarn okhttp3.**
 -keep class io.flutter.** { *; }
+-dontwarn io.flutter.**
 -keep class io.flutter.embedding.** { *; }
 -keep class com.odoo.** { *; }
 -keep class org.apache.xmlrpc.** { *; }
