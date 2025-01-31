@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'odoo_service.dart';
-import 'package:intl/intl.dart';
+import 'currency_helper.dart';
 import 'edit_header_dialog.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 class QuotationDetailScreen extends StatefulWidget {
   final OdooService odooService;
@@ -47,12 +49,6 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       });
     });
   }
-
-  final currencyFormatter = NumberFormat.currency(
-    locale: 'id_ID', // Format Indonesia
-    symbol: 'Rp ', // Simbol Rupiah
-    decimalDigits: 2,
-  );
 
   void _loadQuotationDetails() {
     quotationDetails =
@@ -243,9 +239,12 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   void _navigateToSaleOrderList() {
     Navigator.pushNamedAndRemoveUntil(
       context,
-      '/home', // Explicitly target the Sales Order List screen
+      '/home', // Arahkan kembali ke halaman utama yang memiliki bottom navigation
       (route) => false,
-      arguments: 1, // Ensure no lingering arguments are passed
+      arguments: {
+        'odooService': widget.odooService,
+        'initialIndex': 1, // Pastikan tab "saleOrderList" di-select
+      },
     );
   }
 
@@ -270,6 +269,16 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving changes: $e')),
       );
+    }
+  }
+
+  Future<String?> _fetchProductImage(int productId) async {
+    try {
+      final product = await widget.odooService.fetchProductById(productId);
+      return product['image_1920'];
+    } catch (e) {
+      print('Error fetching product image: $e');
+      return null;
     }
   }
 
@@ -358,54 +367,134 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
 
   void _showAddProductDialog() async {
     try {
-      // Fetch daftar produk
       final products = await widget.odooService.fetchProducts();
 
       // Filter hanya produk dengan qty_available > 0
-      final availableProducts = products.where((product) {
+      List<Map<String, dynamic>> availableProducts = products.where((product) {
         final qtyAvailable = product['qty_available'] ?? 0;
         return qtyAvailable > 0;
       }).toList();
 
+      TextEditingController searchController = TextEditingController();
+      List<Map<String, dynamic>> displayedProducts =
+          List.from(availableProducts);
+
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            title: const Text(
-              "Select Product",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 400.0,
-              child: ListView.builder(
-                itemCount: availableProducts.length,
-                itemBuilder: (context, index) {
-                  final product = availableProducts[index];
-                  return ListTile(
-                    title: Text(product['name'],
-                        style: const TextStyle(fontSize: 12)),
-                    subtitle: Text(
-                      'Price: ${currencyFormatter.format(product['list_price'])}\n'
-                      'Available: ${product['qty_available']}',
-                      style: const TextStyle(fontSize: 12),
+          return StatefulBuilder(
+            builder: (context, setState) {
+              void _filterProducts(String query) {
+                setState(() {
+                  displayedProducts = availableProducts
+                      .where((product) => product['name']
+                          .toString()
+                          .toLowerCase()
+                          .contains(query.toLowerCase()))
+                      .toList();
+                });
+              }
+
+              return AlertDialog(
+                title: Column(
+                  children: [
+                    Text(
+                      "Select Product",
+                      style: GoogleFonts.poppins(
+                        textStyle: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.add_circle, color: Colors.green),
-                      onPressed: () {
-                        Navigator.pop(context, {
-                          'id': null,
-                          'product_id': product['id'],
-                          'name': product['name'],
-                          'product_uom_qty': 1,
-                          'price_unit': product['list_price'],
-                        });
-                      },
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: searchController,
+                      onChanged: _filterProducts,
+                      decoration: InputDecoration(
+                        hintText: 'Search products...',
+                        prefixIcon: const Icon(CupertinoIcons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 10),
+                      ),
                     ),
-                  );
-                },
-              ),
-            ),
+                  ],
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 400.0,
+                  child: ListView.builder(
+                    itemCount: displayedProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = displayedProducts[index];
+
+                      Widget productImage;
+                      if (product['image_1920'] != null &&
+                          product['image_1920'].isNotEmpty) {
+                        try {
+                          final decodedImage =
+                              base64Decode(product['image_1920']);
+                          productImage = ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              decodedImage,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.broken_image, size: 50);
+                              },
+                            ),
+                          );
+                        } catch (e) {
+                          productImage =
+                              const Icon(Icons.broken_image, size: 50);
+                        }
+                      } else {
+                        productImage =
+                            const Icon(Icons.image_not_supported, size: 50);
+                      }
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 0, vertical: 4),
+                        leading: Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: productImage,
+                        ),
+                        title: Text(
+                          product['display_name'],
+                          style: GoogleFonts.lato(
+                            textStyle: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Price: ${CurrencyHelper().currencyFormatter.format(product['list_price'])}\n'
+                          'Available: ${product['qty_available']}',
+                          style: GoogleFonts.lato(
+                            textStyle: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(CupertinoIcons.add_circled,
+                              color: Colors.green),
+                          onPressed: () {
+                            Navigator.pop(context, {
+                              'id': null,
+                              'product_id': product['id'],
+                              'name': product['display_name'],
+                              'product_uom_qty': 1,
+                              'price_unit': product['list_price'],
+                            });
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
           );
         },
       );
@@ -456,12 +545,14 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Quotation Details",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-          centerTitle: true,
-          backgroundColor: Colors.blue[300],
+          title: Text("Quotation Details",
+              style: GoogleFonts.poppins(
+                  textStyle:
+                      TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              textAlign: TextAlign.left),
+          backgroundColor: Colors.white,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(CupertinoIcons.arrow_left),
             onPressed: _navigateToSaleOrderList, // Custom back button behavior
           ),
           actions: [
@@ -477,12 +568,14 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                 if (status == 'draft') {
                   actions.addAll([
                     IconButton(
-                      icon: const Icon(Icons.check, color: Colors.white),
+                      icon: const Icon(CupertinoIcons.check_mark_circled,
+                          color: Colors.black, size: 15),
                       onPressed: _confirmQuotation,
                       tooltip: 'Confirm',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.white),
+                      icon: const Icon(CupertinoIcons.pencil_circle,
+                          color: Colors.black, size: 15),
                       onPressed: () async {
                         final data = await quotationDetails;
                         _showEditHeaderDialog(data);
@@ -490,7 +583,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       tooltip: 'Edit',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
+                      icon: const Icon(CupertinoIcons.xmark_circle,
+                          color: Colors.black, size: 15),
                       onPressed: _cancelQuotation,
                       tooltip: 'Cancel',
                     ),
@@ -499,7 +593,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                 if (status == 'cancel') {
                   actions.add(
                     IconButton(
-                      icon: const Icon(Icons.undo, color: Colors.white),
+                      icon: const Icon(
+                          CupertinoIcons.arrow_counterclockwise_circle,
+                          color: Colors.black),
                       onPressed: _setToQuotation,
                       tooltip: 'Set to Quotation',
                     ),
@@ -529,9 +625,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
             final deliveryAddress =
                 data['partner_shipping_id']?[1] ?? 'Unknown';
             final dateOrder = data['date_order'] ?? 'Unknown';
-            final vat = (data['vat'] is String && data['vat']!.isNotEmpty)
-                ? data['vat']
-                : '';
+            // final vat = (data['vat'] is String && data['vat']!.isNotEmpty)
+            //     ? data['vat']
+            //     : '';
             final orderLineIds = List<int>.from(data['order_line'] ?? []);
             final untaxedAmount = data['amount_untaxed'] ?? 0.0;
             final totalCost = data['amount_total'] ?? 0.0;
@@ -550,9 +646,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       Expanded(
                         child: Text(
                           '${data['name']}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.lato(
+                            textStyle: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -565,10 +663,12 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                         ),
                         child: Text(
                           state.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.poppins(
+                            textStyle: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -582,90 +682,104 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                     children: [
                       TableRow(
                         children: [
-                          const Text(
+                          Text(
                             'Customer',
-                            style: TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
-                          const Text(
+                          Text(
                             ' :',
-                            style: TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                           Text(
                             customerName,
-                            style: const TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
                       TableRow(
                         children: [
-                          const Text(
+                          Text(
                             'Delivery Address',
-                            style: TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
-                          const Text(
+                          Text(
                             ' :',
-                            style: TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                           Text(
                             deliveryAddress,
-                            style: const TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
                       TableRow(
                         children: [
-                          const Text(
-                            'NPWP',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          const Text(
-                            ' :',
-                            style: TextStyle(fontSize: 12),
+                          Text(
+                            'Date',
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                           Text(
-                            vat,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          const Text(
-                            'Date',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          const Text(
                             ' :',
-                            style: TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                           Text(
                             dateOrder,
-                            style: const TextStyle(fontSize: 12),
+                            style: GoogleFonts.lato(
+                              textStyle: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
                       if (state != 'draft' && state != 'cancel')
                         TableRow(
                           children: [
-                            const Text(
+                            Text(
                               'Delivery Order',
-                              style: TextStyle(fontSize: 12),
+                              style: GoogleFonts.lato(
+                                textStyle: TextStyle(fontSize: 12),
+                              ),
                             ),
-                            const Text(
+                            Text(
                               ' :',
-                              style: TextStyle(fontSize: 12),
+                              style: GoogleFonts.lato(
+                                textStyle: TextStyle(fontSize: 12),
+                              ),
                             ),
                             FutureBuilder<String>(
                               future: deliveryOrderStatus,
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
-                                  return const Text('Loading...',
-                                      style: TextStyle(fontSize: 12));
+                                  return Text(
+                                    'Loading...',
+                                    style: GoogleFonts.roboto(
+                                      textStyle: TextStyle(fontSize: 12),
+                                    ),
+                                  );
                                 }
                                 if (snapshot.hasError) {
-                                  return Text('Error: ${snapshot.error}',
-                                      style: TextStyle(fontSize: 12));
+                                  return Text(
+                                    'Error: ${snapshot.error}',
+                                    style: GoogleFonts.roboto(
+                                      textStyle: TextStyle(fontSize: 12),
+                                    ),
+                                  );
                                 }
                                 final deliveryStatus =
                                     snapshot.data ?? 'Not Found';
@@ -680,8 +794,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                       ),
                                       child: Text(
                                         _mapDeliveryStatus(deliveryStatus),
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 12),
+                                        style: GoogleFonts.lato(
+                                          textStyle: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -693,25 +810,37 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       if (state != 'draft' && state != 'cancel')
                         TableRow(
                           children: [
-                            const Text(
+                            Text(
                               'Invoice',
-                              style: TextStyle(fontSize: 12),
+                              style: GoogleFonts.lato(
+                                textStyle: TextStyle(fontSize: 12),
+                              ),
                             ),
-                            const Text(
+                            Text(
                               ' :',
-                              style: TextStyle(fontSize: 12),
+                              style: GoogleFonts.lato(
+                                textStyle: TextStyle(fontSize: 12),
+                              ),
                             ),
                             FutureBuilder<String>(
                               future: invoiceStatus,
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
-                                  return const Text('Loading...',
-                                      style: TextStyle(fontSize: 12));
+                                  return Text(
+                                    'Loading...',
+                                    style: GoogleFonts.roboto(
+                                      textStyle: TextStyle(fontSize: 12),
+                                    ),
+                                  );
                                 }
                                 if (snapshot.hasError) {
-                                  return const Text('Error',
-                                      style: TextStyle(fontSize: 12));
+                                  return Text(
+                                    'Error',
+                                    style: GoogleFonts.roboto(
+                                      textStyle: TextStyle(fontSize: 12),
+                                    ),
+                                  );
                                 }
                                 final invoiceState =
                                     snapshot.data ?? 'Not Found';
@@ -726,8 +855,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                       ),
                                       child: Text(
                                         _mapInvoiceStatus(invoiceState),
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 12),
+                                        style: GoogleFonts.lato(
+                                          textStyle: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -742,28 +874,33 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Order Lines",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14),
+                        style: GoogleFonts.lato(
+                          textStyle: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
                       ),
                       if (isEditLineMode)
                         Row(
                           children: [
                             IconButton(
-                              icon:
-                                  const Icon(Icons.add_box, color: Colors.blue),
+                              icon: const Icon(CupertinoIcons.add_circled,
+                                  color: Colors.blue, size: 15),
                               onPressed: _showAddProductDialog,
                               tooltip: 'Add Product',
                             ),
                             IconButton(
-                              icon: const Icon(Icons.save, color: Colors.green),
+                              icon: const Icon(CupertinoIcons.square_arrow_down,
+                                  color: Colors.green, size: 15),
                               onPressed: _saveChanges,
                               tooltip: 'Save Changes',
                             ),
                             IconButton(
-                              icon: const Icon(Icons.undo_rounded,
-                                  color: Colors.red),
+                              icon: const Icon(
+                                  CupertinoIcons.arrow_counterclockwise_circle,
+                                  color: Colors.red,
+                                  size: 15),
                               onPressed: _cancelEditMode,
                               tooltip: 'Cancel Edit',
                             ),
@@ -771,7 +908,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                         ),
                       if (!isEditLineMode && state == 'draft')
                         IconButton(
-                          icon: const Icon(Icons.edit),
+                          icon: const Icon(CupertinoIcons.pencil_circle,
+                              size: 15),
                           onPressed: () async {
                             await _loadOrderLines();
                             setState(() {
@@ -805,9 +943,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                           children: [
                                             Text(
                                               name,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12),
+                                              style: GoogleFonts.lato(
+                                                textStyle: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12),
+                                              ),
                                             ),
                                             TextField(
                                               controller:
@@ -819,8 +959,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                                 // border: OutlineInputBorder(),
                                                 // isDense: true,
                                               ),
-                                              style:
-                                                  const TextStyle(fontSize: 12),
+                                              style: GoogleFonts.poppins(
+                                                textStyle:
+                                                    TextStyle(fontSize: 12),
+                                              ),
                                               onChanged: (value) {
                                                 final parsedPrice =
                                                     double.tryParse(value) ??
@@ -842,8 +984,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                           children: [
                                             IconButton(
                                               icon: const Icon(
-                                                  Icons.remove_circle,
-                                                  color: Colors.red),
+                                                  CupertinoIcons.minus_circle,
+                                                  color: Colors.red,
+                                                  size: 15),
                                               onPressed: () =>
                                                   _updateQuantity(index, -1),
                                             ),
@@ -854,8 +997,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                                 keyboardType:
                                                     TextInputType.number,
                                                 textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                    fontSize: 12),
+                                                style: GoogleFonts.lato(
+                                                  textStyle:
+                                                      TextStyle(fontSize: 12),
+                                                ),
                                                 // decoration:
                                                 //     const InputDecoration(
                                                 //   border: OutlineInputBorder(),
@@ -875,8 +1020,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                               ),
                                             ),
                                             IconButton(
-                                              icon: const Icon(Icons.add_circle,
-                                                  color: Colors.green),
+                                              icon: const Icon(
+                                                  CupertinoIcons.plus_circle,
+                                                  color: Colors.green,
+                                                  size: 15),
                                               onPressed: () =>
                                                   _updateQuantity(index, 1),
                                             ),
@@ -884,8 +1031,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                         ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete,
-                                            color: Colors.red),
+                                        icon: const Icon(
+                                            CupertinoIcons.trash_circle,
+                                            color: Colors.red,
+                                            size: 15),
                                         onPressed: () {
                                           setState(() {
                                             if (tempOrderLines[index]['id'] !=
@@ -933,38 +1082,43 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                   final qty = line['product_uom_qty'] ?? 0;
                                   final price = line['price_unit'] ?? 0.0;
                                   final subtotal = qty * price;
-                                  final productImageBase64 = line[
-                                      'image_1920']; // Gambar produk dalam base64
 
                                   return Card(
                                     margin: const EdgeInsets.symmetric(
                                         vertical: 8.0),
                                     child: ListTile(
-                                      leading: ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                            8), // Membulatkan sudut gambar
-                                        child: productImageBase64 != null &&
-                                                productImageBase64 is String
-                                            ? Image.memory(
-                                                base64Decode(
-                                                    productImageBase64),
-                                                width: 50, // Lebar gambar
-                                                height: 50, // Tinggi gambar
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error,
-                                                    stackTrace) {
-                                                  return const Icon(
-                                                      Icons.broken_image,
-                                                      size: 50); // Jika error
-                                                },
-                                              )
-                                            : const Icon(
+                                      leading: FutureBuilder<String?>(
+                                        future: _fetchProductImage(
+                                            line['product_id'][0]),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return const CircularProgressIndicator();
+                                          }
+                                          if (snapshot.hasError ||
+                                              snapshot.data == null ||
+                                              snapshot.data!.isEmpty) {
+                                            return const Icon(
                                                 Icons.image_not_supported,
-                                                size: 50), // Placeholder
+                                                size: 50);
+                                          }
+                                          return ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: Image.memory(
+                                              base64Decode(snapshot.data!),
+                                              width: 50,
+                                              height: 50,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          );
+                                        },
                                       ),
                                       title: Text(
                                         line['name'] ?? 'No Description',
-                                        style: const TextStyle(fontSize: 12),
+                                        style: GoogleFonts.lato(
+                                          textStyle: TextStyle(fontSize: 12),
+                                        ),
                                       ),
                                       subtitle: Padding(
                                         padding: const EdgeInsets.only(top: 1),
@@ -976,60 +1130,80 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                           children: [
                                             TableRow(
                                               children: [
-                                                const Text(
+                                                Text(
                                                   'Qty',
-                                                  style:
-                                                      TextStyle(fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
-                                                const Text(
+                                                Text(
                                                   ' : ',
-                                                  style:
-                                                      TextStyle(fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
                                                 Text(
                                                   qty.toString(),
-                                                  style: const TextStyle(
-                                                      fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                             TableRow(
                                               children: [
-                                                const Text(
+                                                Text(
                                                   'Price',
-                                                  style:
-                                                      TextStyle(fontSize: 12),
-                                                ),
-                                                const Text(
-                                                  ' : ',
-                                                  style:
-                                                      TextStyle(fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
                                                 Text(
-                                                  currencyFormatter
+                                                  ' : ',
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  CurrencyHelper()
+                                                      .currencyFormatter
                                                       .format(price),
-                                                  style: const TextStyle(
-                                                      fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                             TableRow(
                                               children: [
-                                                const Text(
+                                                Text(
                                                   'Subtotal',
-                                                  style:
-                                                      TextStyle(fontSize: 12),
-                                                ),
-                                                const Text(
-                                                  ' : ',
-                                                  style:
-                                                      TextStyle(fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
                                                 Text(
-                                                  currencyFormatter
+                                                  ' : ',
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  CurrencyHelper()
+                                                      .currencyFormatter
                                                       .format(subtotal),
-                                                  style: const TextStyle(
-                                                      fontSize: 12),
+                                                  style: GoogleFonts.lato(
+                                                    textStyle:
+                                                        TextStyle(fontSize: 12),
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -1055,17 +1229,23 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Untaxed Amount:',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.poppins(
+                                    textStyle: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                                 Text(
-                                  currencyFormatter.format(untaxedAmount),
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
+                                  CurrencyHelper()
+                                      .currencyFormatter
+                                      .format(untaxedAmount),
+                                  style: GoogleFonts.poppins(
+                                    textStyle: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                               ],
                             ),
@@ -1073,17 +1253,23 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Total:',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.poppins(
+                                    textStyle: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                                 Text(
-                                  currencyFormatter.format(totalCost),
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
+                                  CurrencyHelper()
+                                      .currencyFormatter
+                                      .format(totalCost),
+                                  style: GoogleFonts.poppins(
+                                    textStyle: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                               ],
                             ),

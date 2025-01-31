@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 class ProfileScreen extends StatelessWidget {
   final OdooService odooService;
@@ -33,9 +35,11 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Session expired. Please log in again.",
-                      style: TextStyle(fontSize: 16, color: Colors.red),
+                      style: GoogleFonts.poppins(
+                        textStyle: TextStyle(fontSize: 16, color: Colors.red),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
@@ -85,30 +89,37 @@ class ProfileScreen extends StatelessWidget {
                       // Animated Avatar
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage: (user['image_1920'] != null && user['image_1920'] is String)
+                        backgroundImage: (user['image_1920'] != null &&
+                                user['image_1920'] is String)
                             ? MemoryImage(base64Decode(user['image_1920']))
                             : null,
-                        child: (user['image_1920'] == null || user['image_1920'] is! String)
-                            ? const Icon(Icons.person, size: 60, color: Colors.white)
+                        child: (user['image_1920'] == null ||
+                                user['image_1920'] is! String)
+                            ? const Icon(CupertinoIcons.person,
+                                size: 60, color: Colors.white)
                             : null,
                       ),
                       const SizedBox(height: 16),
                       // User Name
                       Text(
                         user['name'],
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        style: GoogleFonts.poppins(
+                          textStyle: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
                       // User Login
                       Text(
                         user['login'],
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.white70,
+                        style: GoogleFonts.lato(
+                          textStyle: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white70,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -118,10 +129,14 @@ class ProfileScreen extends StatelessWidget {
                           odooService.logout();
                           Navigator.pushReplacementNamed(context, '/login');
                         },
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        label: const Text(
+                        icon: const Icon(CupertinoIcons.square_arrow_up,
+                            color: Colors.white),
+                        label: Text(
                           "Logout",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                          style: GoogleFonts.poppins(
+                            textStyle:
+                                TextStyle(fontSize: 16, color: Colors.white),
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.redAccent,

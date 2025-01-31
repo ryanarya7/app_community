@@ -5,7 +5,9 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'odoo_service.dart';
 import 'sale_order_list_screen.dart';
-import 'collection_screen.dart';
+// import 'collection_screen.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class NavigationScreen extends StatefulWidget {
   final OdooService odooService;
@@ -31,7 +33,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
       HomeScreen(odooService: widget.odooService),
       // CategoriesScreen(odooService: widget.odooService),
       SaleOrderListScreen(odooService: widget.odooService),
-      CollectionScreen(odooService: widget.odooService),
+      // CollectionScreen(odooService: widget.odooService),
       ProfileScreen(odooService: widget.odooService),
     ];
   }
@@ -40,11 +42,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Gunakan variabel lokal untuk menyimpan dan menghapus argumen
-    final int? arguments = ModalRoute.of(context)?.settings.arguments as int?;
-    if (arguments != null) {
+    // Ambil argumen dari route
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    if (args is int && args != _selectedIndex) {
       setState(() {
-        _selectedIndex = arguments; // Set tab yang akan ditampilkan
+        _selectedIndex = args; // Perbarui _selectedIndex sesuai argumen
       });
 
       // Simulasi penghapusan argumen dengan logika tambahan
@@ -54,7 +57,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
             pageBuilder: (context, animation1, animation2) => NavigationScreen(
               odooService:
                   widget.odooService, // Pastikan odooService diteruskan
-              initialIndex: arguments, // Tetapkan initialIndex ke argumen
+              initialIndex: args, // Gunakan args yang sudah dideklarasikan
             ),
             settings: const RouteSettings(
                 arguments: null), // Atur arguments menjadi null
@@ -90,20 +93,28 @@ class _NavigationScreenState extends State<NavigationScreen> {
           selectedItemColor: Colors.white,
           unselectedItemColor: Colors.white70,
           showUnselectedLabels: false,
-          selectedFontSize: 14,
-          unselectedFontSize: 12,
+          selectedFontSize: 12,
+          unselectedFontSize: 10,
           type: BottomNavigationBarType.fixed,
+          selectedLabelStyle: GoogleFonts.roboto(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+          unselectedLabelStyle: GoogleFonts.roboto(
+            fontSize: 10,
+            fontWeight: FontWeight.w400,
+          ),
           onTap: (index) {
             setState(() {
               _selectedIndex = index;
             });
           },
           items: [
-            _buildNavItem(Icons.home, "Home", 0),
-            // _buildNavItem(Icons.category, "Categories", 1),
-            _buildNavItem(Icons.shopping_cart, "Sales Order", 1),
-            _buildNavItem(Icons.attach_money, "Collection", 2),
-            _buildNavItem(Icons.person, "Profile", 3),
+            _buildNavItem(CupertinoIcons.home, "Home", 0),
+            // _buildNavItem(CupertinoIcons.category, "Categories", 1),
+            _buildNavItem(CupertinoIcons.shopping_cart, "Sales Order", 1),
+            // _buildNavItem(Icons.attach_money, "Collection", 2),
+            _buildNavItem(CupertinoIcons.person, "Profile", 2),
           ],
         ),
       ),

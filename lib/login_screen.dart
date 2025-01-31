@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'odoo_service.dart';
 import 'navigation_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'currency_helper.dart';
+
+// import 'package:flutter/cupertino.dart';
 
 class LoginScreen extends StatefulWidget {
-  final OdooService odooService;
-
-  const LoginScreen({super.key, required this.odooService});
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -14,6 +16,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
+  final TextEditingController _urlController = TextEditingController();
   final TextEditingController _databaseController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -28,8 +31,9 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _databaseController.text = 'BPAqc2';
-    _usernameController.text = 'app';
+    _urlController.text = 'https://jlm17.alphasoft.co.id/';
+    _databaseController.text = 'test_app';
+    _usernameController.text = 'admin';
     _passwordController.text = 'a';
 
     // Inisialisasi AnimationController untuk getar
@@ -42,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _shakeController.dispose();
+    _urlController.dispose();
     _databaseController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
@@ -56,12 +61,15 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      await widget.odooService.login(
+      final odooService = OdooService(_urlController.text.trim());
+
+      await odooService.login(
         _databaseController.text.trim(),
         _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
+      await CurrencyHelper().init(odooService);
       // Jika login berhasil
       setState(() {
         _isLoginSuccess = true; // Animasi berubah menjadi ceklis
@@ -76,17 +84,17 @@ class _LoginScreenState extends State<LoginScreen>
         MaterialPageRoute(
           builder: (context) => HelloScreen(
             username: _usernameController.text.trim(),
-            odooService: widget.odooService,
+            odooService: odooService,
           ),
         ),
       );
     } catch (e) {
       setState(() {
         _isError = true; // Set error state untuk animasi getar dan field merah
-        _errorMessage = "Invalid credentials or user not found. Please try again.";
+        _errorMessage =
+            "Invalid credentials or user not found. Please try again.";
         _isLoginSuccess = false; // Tetap tampilkan ikon default jika gagal
         print("Login error: $e");
-        
       });
 
       // Jalankan animasi getar pada field
@@ -149,7 +157,10 @@ class _LoginScreenState extends State<LoginScreen>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: _isError
-                      ? [Colors.red[300]!, Colors.white] // Gradien merah dan putih saat error
+                      ? [
+                          Colors.red[300]!,
+                          Colors.white
+                        ] // Gradien merah dan putih saat error
                       : (_isLoading
                           ? [Colors.blue[300]!, Colors.green[700]!]
                           : [Colors.white, Colors.grey[700]!]),
@@ -189,23 +200,27 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       const SizedBox(height: 20),
                       // Title
-                      const Text(
+                      Text(
                         'Welcome to Odoo',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        style: GoogleFonts.poppins(
+                          textStyle: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       // Shimmering Text
                       Shimmer.fromColors(
                         baseColor: Colors.white,
                         highlightColor: Colors.grey[300]!,
-                        child: const Text(
+                        child: Text(
                           'Powered by Alphasoft',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white,
+                          style: GoogleFonts.lato(
+                            textStyle: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -220,6 +235,16 @@ class _LoginScreenState extends State<LoginScreen>
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             children: [
+                              _buildShakeWidget(
+                                child: TextField(
+                                  controller: _urlController,
+                                  decoration: _getInputDecoration(
+                                    label: 'Odoo URL',
+                                    icon: Icons.web,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               _buildShakeWidget(
                                 child: TextField(
                                   controller: _databaseController,
@@ -272,13 +297,16 @@ class _LoginScreenState extends State<LoginScreen>
                       _isLoading
                           ? Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Text(
                                   'Loading',
-                                  style: TextStyle(color: Colors.white),
+                                  style: GoogleFonts.roboto(
+                                    textStyle:
+                                        const TextStyle(color: Colors.white),
+                                  ),
                                 ),
-                                SizedBox(width: 8),
-                                SizedBox(
+                                const SizedBox(width: 8),
+                                const SizedBox(
                                   height: 15,
                                   width: 15,
                                   child: CircularProgressIndicator(
@@ -298,11 +326,13 @@ class _LoginScreenState extends State<LoginScreen>
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Login',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
+                                style: GoogleFonts.poppins(
+                                  textStyle: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -311,9 +341,11 @@ class _LoginScreenState extends State<LoginScreen>
                         const SizedBox(height: 20),
                         Text(
                           _errorMessage!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.roboto(
+                            textStyle: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -329,7 +361,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 }
-
 
 class HelloScreen extends StatefulWidget {
   final String username;
@@ -370,7 +401,8 @@ class _HelloScreenState extends State<HelloScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => NavigationScreen(odooService: widget.odooService),
+            builder: (context) =>
+                NavigationScreen(odooService: widget.odooService),
           ),
         );
       });
@@ -421,10 +453,12 @@ class _HelloScreenState extends State<HelloScreen> {
                     },
                     child: Text(
                       'Hello, ${_fullName ?? 'User'}!',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                      style: GoogleFonts.poppins(
+                        textStyle: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'odoo_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 class FormHeaderQuotation extends StatefulWidget {
   final OdooService odooService;
@@ -27,7 +29,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   Map<String, dynamic>? selectedInvoiceAddress;
   Map<String, dynamic>? selectedDeliveryAddress;
 
-  String? customervat;
+  // String? customervat;
   bool showSalespersonField = false;
 
   @override
@@ -39,7 +41,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   Future<void> _loadData() async {
     try {
       final fetchedCustomers = await widget.odooService.fetchCustomers();
-      final fetchedSalespersons = await widget.odooService.fetchSalespersons();
+      // final fetchedSalespersons = await widget.odooService.fetchSalespersons();
       final fetchedPaymentTerms = await widget.odooService.fetchPaymentTerms();
       final fetchedWarehouses = await widget.odooService.fetchWarehouses();
       final fetchedAddresses = await widget.odooService.fetchCustomers();
@@ -48,18 +50,15 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
 
       setState(() {
         customers = fetchedCustomers;
-        salespersons = fetchedSalespersons;
+        // salespersons = fetchedSalespersons;
         paymentTerms = fetchedPaymentTerms;
         warehouses = fetchedWarehouses;
         globalAddresses = fetchedAddresses;
 
-        // Auto-select salesperson based on logged-in user
-        selectedSalesperson = salespersons.firstWhere(
-          (salesperson) => salesperson['name'] == loggedInUser['name'],
-          orElse: () => salespersons.isNotEmpty
-              ? salespersons.first
-              : <String, dynamic>{},
-        );
+        selectedSalesperson = {
+          'id': loggedInUser['id'],
+          'name': loggedInUser['name'],
+        };
 
         // Auto-select warehouse based on logged-in user's warehouse_id
         selectedWarehouse = warehouses.firstWhere(
@@ -117,11 +116,11 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
       });
 
       // Perbarui Vat sesuai Invoice Address yang terpilih
-      final vat = await _getvatFromInvoiceAddress(selectedInvoiceAddress);
-      setState(() {
-        selectedCustomer?['vat'] = vat;
-        customervat = vat;
-      });
+      // final vat = await _getvatFromInvoiceAddress(selectedInvoiceAddress);
+      // setState(() {
+      //   selectedCustomer?['vat'] = vat;
+      //   customervat = vat;
+      // });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,22 +147,29 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
         'partner_id': selectedCustomer!['id'],
         'partner_invoice_id': selectedInvoiceAddress!['id'],
         'partner_shipping_id': selectedDeliveryAddress!['id'],
-        'user_member_id': selectedSalesperson!['id'],
+        'user_id': selectedSalesperson!['id'],
         'payment_term_id': selectedPaymentTerm!['id'],
         'warehouse_id': selectedWarehouse!['id'],
       };
-      if (customervat != '0000000000000000' && customervat!.isEmpty) {
-        headerData['vat'] = customervat;
-      } else {
-        headerData['vat'] = '0000000000000000';
-      }
+      // if (customervat != '0000000000000000' && customervat!.isEmpty) {
+      //   headerData['vat'] = customervat;
+      // } else {
+      //   headerData['vat'] = '0000000000000000';
+      // }
 
       final quotationId =
           await widget.odooService.createQuotationHeader(headerData);
 
-      Navigator.pushNamed(context, '/formDetail', arguments: {
-        'quotationId': quotationId,
-      });
+      Navigator.pushNamed(
+        context,
+        '/formDetail',
+        arguments: {
+          'odooService': widget.odooService,
+          'headerData': {
+            'quotationId': quotationId, // Pastikan dikemas dalam Map
+          },
+        },
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving quotation header: $e')),
@@ -194,49 +200,49 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
     }
   }
 
-  Future<String?> _getvatFromInvoiceAddress(
-      Map<String, dynamic>? invoiceAddress) async {
-    if (invoiceAddress == null) {
-      _showVatWarning();
-      return '0000000000000000';
-    }
+  // Future<String?> _getvatFromInvoiceAddress(
+  //     Map<String, dynamic>? invoiceAddress) async {
+  //   if (invoiceAddress == null) {
+  //     _showVatWarning();
+  //     return '0000000000000000';
+  //   }
 
-    // Jika Invoice Address sama dengan Customer, gunakan Vat Customer
-    if (invoiceAddress['id'] == selectedCustomer?['id']) {
-      final vat = selectedCustomer?['vat'];
+  //   // Jika Invoice Address sama dengan Customer, gunakan Vat Customer
+  //   if (invoiceAddress['id'] == selectedCustomer?['id']) {
+  //     final vat = selectedCustomer?['vat'];
 
-      if (vat == null || vat == false || vat == '') {
-        _showVatWarning();
-        return '0000000000000000';
-      }
+  //     if (vat == null || vat == false || vat == '') {
+  //       _showVatWarning();
+  //       return '0000000000000000';
+  //     }
 
-      return vat.toString(); // Pastikan nilai selalu berupa string
-    }
+  //     return vat.toString(); // Pastikan nilai selalu berupa string
+  //   }
 
-    final matchedAddress = globalAddresses.firstWhere(
-      (address) => address['id'] == invoiceAddress['id'],
-      orElse: () => {'vat': ''}, // Default jika tidak ditemukan
-    );
+  //   final matchedAddress = globalAddresses.firstWhere(
+  //     (address) => address['id'] == invoiceAddress['id'],
+  //     orElse: () => {'vat': ''}, // Default jika tidak ditemukan
+  //   );
 
-    final vat = matchedAddress['vat'];
+  //   final vat = matchedAddress['vat'];
 
-    if (vat == null || vat == false || vat == '') {
-      _showVatWarning();
-      return '0000000000000000';
-    }
+  //   if (vat == null || vat == false || vat == '') {
+  //     _showVatWarning();
+  //     return '0000000000000000';
+  //   }
 
-    return vat
-        .toString(); // Konversi VAT menjadi string untuk menghindari error
-  }
+  //   return vat
+  //       .toString(); // Konversi VAT menjadi string untuk menghindari error
+  // }
 
-  void _showVatWarning() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Warning: VAT is missing for the selected customer.'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
+  // void _showVatWarning() {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(
+  //       content: Text('Warning: VAT is missing for the selected customer.'),
+  //       backgroundColor: Colors.orange,
+  //     ),
+  //   );
+  // }
 
   Widget _buildStyledDropdown({
     required String label,
@@ -250,10 +256,12 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+          style: GoogleFonts.poppins(
+            textStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -280,7 +288,7 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
                   enabled ? Colors.white : Colors.grey[200], // Warna latar
               enabledBorder: OutlineInputBorder(
                 borderSide:
-                    BorderSide(color: enabled ? Colors.blue : Colors.grey),
+                    BorderSide(color: enabled ? Colors.black : Colors.grey),
                 borderRadius: BorderRadius.circular(8),
               ),
               disabledBorder: OutlineInputBorder(
@@ -298,9 +306,13 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Form Header Quotation",
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue,
+        title: Text(
+          "Form Header Quotation",
+          style: GoogleFonts.poppins(
+            textStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+        backgroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -333,11 +345,11 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
                           selectedInvoiceAddress = value;
                         });
 
-                        // Perbarui Vat berdasarkan Invoice Address
-                        final vat = await _getvatFromInvoiceAddress(value);
-                        setState(() {
-                          selectedCustomer?['vat'] = vat;
-                        });
+                        // // Perbarui Vat berdasarkan Invoice Address
+                        // final vat = await _getvatFromInvoiceAddress(value);
+                        // setState(() {
+                        //   selectedCustomer?['vat'] = vat;
+                        // });
                       }
                     : null, // Nonaktifkan jika Customer belum dipilih
                 enabled: selectedCustomer != null, // Tentukan status aktif
@@ -394,9 +406,11 @@ class _FormHeaderQuotationState extends State<FormHeaderQuotation> {
               Center(
                 child: ElevatedButton(
                   onPressed: _saveHeader,
-                  child: const Text(
+                  child: Text(
                     "Save and Continue",
-                    style: TextStyle(color: Colors.white),
+                    style: GoogleFonts.lato(
+                      textStyle: TextStyle(color: Colors.white),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,

@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'currency_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
 import 'odoo_service.dart';
 import 'product_detail_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 class HomeScreen extends StatefulWidget {
   final OdooService odooService;
@@ -22,12 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isGridView = true;
   bool _isCategoryLoading = false; // Status loading kategori
   final TextEditingController _searchController = TextEditingController();
-
-  final currencyFormatter = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 2,
-  );
 
   @override
   void initState() {
@@ -170,10 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue[200] : Colors.white,
+                color: isSelected ? Colors.grey[500] : Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected ? Colors.blue : Colors.grey,
+                  color: isSelected ? Colors.grey : Colors.grey,
                   width: 1.5,
                 ),
               ),
@@ -182,10 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Center(
                 child: Text(
                   category['name'] ?? 'Unknown',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.blue[900] : Colors.black87,
+                  style: GoogleFonts.poppins(
+                    textStyle: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.grey[900] : Colors.black87,
+                    ),
                   ),
                 ),
               ),
@@ -242,9 +240,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Nama Produk
                     Text(
                       product['name'] ?? 'Unknown Product',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -252,19 +252,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 5),
                     // Harga
                     Text(
-                      currencyFormatter.format(product['list_price'] ?? 0),
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                      CurrencyHelper()
+                          .currencyFormatter
+                          .format(product['list_price'] ?? 0),
+                      style: GoogleFonts.poppins(
+                        textStyle: TextStyle(
+                          color: Colors.green,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     // Ketersediaan
                     Text(
                       'Available: ${product['qty_available'] ?? 0}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
                       ),
                     ),
                   ],
@@ -334,9 +339,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             product['default_code'] != false
                         ? '${product['default_code']} ${product['name']}'
                         : product['name'],
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black87,
+                    style: GoogleFonts.lato(
+                      textStyle: TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -344,19 +351,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 5),
                   // Harga Produk
                   Text(
-                    currencyFormatter.format(product['list_price'] ?? 0),
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                    CurrencyHelper()
+                        .currencyFormatter
+                        .format(product['list_price'] ?? 0),
+                    style: GoogleFonts.poppins(
+                      textStyle: TextStyle(
+                        color: Colors.green,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   // Ketersediaan Produk
                   Text(
                     'Available: ${product['qty_available'] ?? 0}',
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 13,
+                    style: GoogleFonts.lato(
+                      textStyle: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 13,
+                      ),
                     ),
                     maxLines: 1,
                   ),
@@ -381,14 +393,16 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         elevation: 1,
         title: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 2),
           child: TextField(
             controller: _searchController,
             onChanged: _filterProducts,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              hintText: 'Search products...',
-              hintStyle: const TextStyle(color: Colors.grey),
+              prefixIcon: const Icon(CupertinoIcons.search, color: Colors.grey),
+              hintText: 'Search Products',
+              hintStyle: GoogleFonts.poppins(
+                textStyle: TextStyle(color: Colors.grey),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
@@ -396,13 +410,17 @@ class _HomeScreenState extends State<HomeScreen> {
               filled: true,
               fillColor: Colors.white,
             ),
-            style: const TextStyle(color: Colors.black),
+            style: GoogleFonts.poppins(
+              textStyle: TextStyle(color: Colors.grey),
+            ),
           ),
         ),
         actions: [
           IconButton(
             icon: Icon(
-              _isGridView ? Icons.list : Icons.grid_view,
+              _isGridView
+                  ? CupertinoIcons.rectangle_grid_1x2
+                  : CupertinoIcons.rectangle_grid_2x2,
               color: Colors.grey,
             ),
             onPressed: () {
@@ -419,10 +437,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildCategoryList(),
           Expanded(
             child: _filteredProducts.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No products found',
-                      style: TextStyle(fontSize: 16),
+                      style: GoogleFonts.robotoCondensed(
+                        textStyle: TextStyle(fontSize: 16),
+                      ),
                     ),
                   )
                 : _isGridView

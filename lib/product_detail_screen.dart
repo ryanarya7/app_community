@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'currency_helper.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -9,18 +10,13 @@ class ProductDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Deklarasi Formatter Mata Uang
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'id_ID', // Format Indonesia
-      symbol: 'Rp ', // Simbol Rupiah
-      decimalDigits: 2,
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
           product['name'],
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(
+            textStyle: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -61,25 +57,33 @@ class ProductDetailScreen extends StatelessWidget {
                             product['default_code'] != false
                         ? '${product['default_code']} ${product['name']}'
                         : product['name'],
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.lato(
+                      textStyle:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(height: 8),
 
                   // Harga Produk
                   Text(
-                    currencyFormatter.format(product['list_price'] ?? 0),
-                    style: const TextStyle(
+                    CurrencyHelper()
+                        .currencyFormatter
+                        .format(product['list_price'] ?? 0),
+                    style: GoogleFonts.poppins(
+                      textStyle: TextStyle(
                         fontSize: 16,
                         color: Colors.green,
-                        fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
                   // Ketersediaan Produk
                   Text(
                     'Available Products: ${product['qty_available']}',
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    style: GoogleFonts.lato(
+                      textStyle: TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
                   ),
                   const SizedBox(height: 16),
 

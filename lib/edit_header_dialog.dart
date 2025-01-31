@@ -41,13 +41,14 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
   Future<void> _loadData() async {
     try {
       final fetchedCustomers = await widget.odooService.fetchCustomers();
-      final fetchedSalespersons = await widget.odooService.fetchSalespersons();
+      // final fetchedSalespersons = await widget.odooService.fetchUser();
       final fetchedPaymentTerms = await widget.odooService.fetchPaymentTerms();
       final fetchedWarehouses = await widget.odooService.fetchWarehouses();
+      final loggedInUser = await widget.odooService.fetchUser();
 
       setState(() {
         customers = fetchedCustomers.cast<Map<String, dynamic>>();
-        salespersons = fetchedSalespersons.cast<Map<String, dynamic>>();
+        // salespersons = fetchedSalespersons.cast<Map<String, dynamic>>();
         paymentTerms = fetchedPaymentTerms.cast<Map<String, dynamic>>();
         warehouses = fetchedWarehouses.cast<Map<String, dynamic>>();
 
@@ -56,10 +57,10 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           orElse: () => {},
         );
 
-        selectedSalesperson = salespersons.firstWhere(
-          (s) => s['id'] == widget.initialData['user_member_id']?[0],
-          orElse: () => {},
-        );
+        selectedSalesperson = {
+          'id': loggedInUser['id'],
+          'name': loggedInUser['name'],
+        };
 
         selectedPaymentTerm = paymentTerms.firstWhere(
           (p) => p['id'] == widget.initialData['payment_term_id']?[0],
@@ -71,7 +72,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           orElse: () => {},
         );
 
-        vatController.text = _getValidVat(selectedCustomer?['vat']);
+        // vatController.text = _getValidVat(selectedCustomer?['vat']);
       });
 
       await _fetchInitialAddresses();
@@ -100,11 +101,11 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
       setState(() {
         invoiceAddresses = [
           {'id': null, 'name': widget.initialData['partner_id']?[1] ?? ''},
-          ...fetchedAddresses.where((a) => a['type'] == 'invoice').toList(),
+          ...fetchedAddresses.where((a) => a['type'] == 'invoice'),
         ];
         deliveryAddresses = [
           {'id': null, 'name': widget.initialData['partner_id']?[1] ?? ''},
-          ...fetchedAddresses.where((a) => a['type'] == 'delivery').toList(),
+          ...fetchedAddresses.where((a) => a['type'] == 'delivery'),
         ];
 
         selectedInvoiceAddress = invoiceAddresses.firstWhere(
@@ -116,7 +117,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           orElse: () => deliveryAddresses.first,
         );
 
-        _updatevat(selectedInvoiceAddress);
+        // _updatevat(selectedInvoiceAddress);
       });
     } catch (e) {
       if (!mounted) return;
@@ -126,56 +127,56 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
     }
   }
 
-  void _updatevat(Map<String, dynamic>? invoiceAddress) {
-    if (invoiceAddress == null) {
-      setState(() {
-        vatController.text = '0000000000000000';
-      });
-      _showVatWarning();
-      return;
-    }
+  // void _updatevat(Map<String, dynamic>? invoiceAddress) {
+  //   if (invoiceAddress == null) {
+  //     setState(() {
+  //       vatController.text = '0000000000000000';
+  //     });
+  //     _showVatWarning();
+  //     return;
+  //   }
 
-    final invoiceAddressName = invoiceAddress['name'];
+  //   final invoiceAddressName = invoiceAddress['name'];
 
-    // Jika alamat invoice sama dengan customer, gunakan VAT dari selectedCustomer
-    if (invoiceAddress['id'] == selectedCustomer?['id']) {
-      setState(() {
-        vatController.text = _getValidVat(selectedCustomer?['vat']);
-      });
-    } else {
-      // Jika alamat berbeda, cari data customer berdasarkan invoice address
-      final matchedCustomer = customers.firstWhere(
-        (customer) => customer['name'] == invoiceAddressName,
-        orElse: () =>
-            {'vat': '0000000000000000'}, // Default VAT jika tidak ditemukan
-      );
+  //   // Jika alamat invoice sama dengan customer, gunakan VAT dari selectedCustomer
+  //   if (invoiceAddress['id'] == selectedCustomer?['id']) {
+  //     setState(() {
+  //       vatController.text = _getValidVat(selectedCustomer?['vat']);
+  //     });
+  //   } else {
+  //     // Jika alamat berbeda, cari data customer berdasarkan invoice address
+  //     final matchedCustomer = customers.firstWhere(
+  //       (customer) => customer['name'] == invoiceAddressName,
+  //       orElse: () =>
+  //           {'vat': '0000000000000000'}, // Default VAT jika tidak ditemukan
+  //     );
 
-      setState(() {
-        vatController.text = _getValidVat(matchedCustomer['vat']);
-      });
-    }
+  //     setState(() {
+  //       vatController.text = _getValidVat(matchedCustomer['vat']);
+  //     });
+  //   }
 
-    if (vatController.text == '0000000000000000') {
-      _showVatWarning();
-    }
-  }
+  //   if (vatController.text == '0000000000000000') {
+  //     _showVatWarning();
+  //   }
+  // }
 
-  String _getValidVat(dynamic vat) {
-    if (vat == null || vat == false || (vat is String && vat.isEmpty)) {
-      return '0000000000000000'; // Set default jika VAT kosong
-    }
-    return vat.toString();
-  }
+  // String _getValidVat(dynamic vat) {
+  //   if (vat == null || vat == false || (vat is String && vat.isEmpty)) {
+  //     return '0000000000000000'; // Set default jika VAT kosong
+  //   }
+  //   return vat.toString();
+  // }
 
-  void _showVatWarning() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-            'Warning: VAT is missing or invalid for the selected invoice address.'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
+  // void _showVatWarning() {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(
+  //       content: Text(
+  //           'Warning: VAT is missing or invalid for the selected invoice address.'),
+  //       backgroundColor: Colors.orange,
+  //     ),
+  //   );
+  // }
 
   Future<void> _loadAddresses(int customerId,
       {bool isInitialLoad = false}) async {
@@ -190,14 +191,14 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           {'id': null, 'name': selectedCustomer?['name'] ?? ''},
           ...fetchedAddresses
               .where((a) => a['type'] == 'invoice' || a['type'] == null)
-              .toList(),
+              ,
         ];
 
         deliveryAddresses = [
           {'id': null, 'name': selectedCustomer?['name'] ?? ''},
           ...fetchedAddresses
               .where((a) => a['type'] == 'delivery' || a['type'] == null)
-              .toList(),
+              ,
         ];
 
         if (!isInitialLoad) {
@@ -211,7 +212,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
             orElse: () => deliveryAddresses.first,
           );
         }
-        _updatevat(selectedInvoiceAddress);
+        // _updatevat(selectedInvoiceAddress);
       });
     } catch (e) {
       if (!mounted) return;
@@ -228,20 +229,20 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
           selectedInvoiceAddress?['id'] ?? (selectedCustomer?['id']),
       'partner_shipping_id':
           selectedDeliveryAddress?['id'] ?? (selectedCustomer?['id']),
-      'user_member_id': selectedSalesperson?['id'],
+      'user_id': selectedSalesperson?['id'],
       'payment_term_id': selectedPaymentTerm?['id'],
       'warehouse_id': selectedWarehouse?['id'],
     };
-    final vatValue = vatController.text.trim();
-    if (vatValue.isEmpty ||
-        vatValue.length != 16 ||
-        vatValue == '0000000000000000') {
-      headerData['vat'] = '0000000000000000';
-    } else {
-      headerData['vat'] = vatValue;
-    }
+    // final vatValue = vatController.text.trim();
+    // if (vatValue.isEmpty ||
+    //     vatValue.length != 16 ||
+    //     vatValue == '0000000000000000') {
+    //   headerData['vat'] = '0000000000000000';
+    // } else {
+    //   headerData['vat'] = vatValue;
+    // }
     if (headerData['partner_id'] == null ||
-        headerData['user_member_id'] == null ||
+        headerData['user_id'] == null ||
         headerData['payment_term_id'] == null ||
         headerData['warehouse_id'] == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -342,7 +343,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
                   selectedInvoiceAddress = value;
                 });
 
-                _updatevat(value);
+                // _updatevat(value);
               },
             ),
             const SizedBox(height: 5),
@@ -356,7 +357,7 @@ class _EditHeaderDialogState extends State<EditHeaderDialog> {
             const SizedBox(height: 5),
             _buildDropdown(
               label: "Salesperson",
-              items: salespersons,
+              items: [selectedSalesperson ?? {}],
               selectedItem: selectedSalesperson,
               onChanged: (_) {},
               isReadOnly: true,

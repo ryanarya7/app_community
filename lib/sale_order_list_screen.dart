@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'odoo_service.dart';
 import 'form_header_quotation_screen.dart';
-import 'package:intl/intl.dart';
+import 'currency_helper.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 class SaleOrderListScreen extends StatefulWidget {
   final OdooService odooService;
@@ -37,12 +39,6 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
     _searchController.dispose();
     super.dispose();
   }
-
-  final currencyFormatter = NumberFormat.currency(
-    locale: 'id_ID', // Format Indonesia
-    symbol: 'Rp ', // Simbol Rupiah
-    decimalDigits: 2,
-  );
 
   Future<void> _loadQuotations({bool isRefreshing = false}) async {
     if (_isLoading || (!_hasMore && !isRefreshing)) return;
@@ -171,9 +167,11 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                    style: GoogleFonts.lato(
+                      textStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -191,10 +189,12 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                     ),
                     child: Text(
                       _getStateLabel(state),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                      style: GoogleFonts.roboto(
+                        textStyle: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -204,9 +204,11 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
             ),
             Text(
               dateOrder,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.grey,
+              style: GoogleFonts.lato(
+                textStyle: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey,
+                ),
               ),
             ),
           ],
@@ -223,17 +225,23 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
               children: [
                 TableRow(
                   children: [
-                    const Text(
+                    Text(
                       "Customer",
-                      style: TextStyle(fontSize: 12),
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(fontSize: 12),
+                      ),
                     ),
-                    const Text(
+                    Text(
                       " :",
-                      style: TextStyle(fontSize: 12),
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(fontSize: 12),
+                      ),
                     ),
                     Text(
                       customer,
-                      style: const TextStyle(fontSize: 12),
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -246,17 +254,23 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                 ),
                 TableRow(
                   children: [
-                    const Text(
+                    Text(
                       "Delivery addr",
-                      style: TextStyle(fontSize: 12),
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(fontSize: 12),
+                      ),
                     ),
-                    const Text(
+                    Text(
                       " :",
-                      style: TextStyle(fontSize: 12),
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(fontSize: 12),
+                      ),
                     ),
                     Text(
                       shippingAddress,
-                      style: const TextStyle(fontSize: 12),
+                      style: GoogleFonts.lato(
+                        textStyle: TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -264,11 +278,12 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              currencyFormatter.format(item['amount_total'] ?? 0),
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                  fontSize: 12),
+              CurrencyHelper()
+                  .currencyFormatter
+                  .format(item['amount_total'] ?? 0),
+              style: GoogleFonts.lato(
+                textStyle: TextStyle(color: Colors.green, fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -276,7 +291,10 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
           Navigator.pushNamed(
             context,
             '/quotationDetail',
-            arguments: item['id'],
+            arguments: {
+              'odooService': widget.odooService,
+              'quotationId': item['id'],
+            },
           );
         },
       ),
@@ -299,9 +317,12 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
               onChanged: _filterQuotations,
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-                hintText: 'Search sales orders...',
-                hintStyle: const TextStyle(color: Colors.grey),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                hintText: 'Search sales',
+                hintStyle: GoogleFonts.poppins(
+                  textStyle: TextStyle(color: Colors.grey),
+                ),
+                prefixIcon:
+                    const Icon(CupertinoIcons.search, color: Colors.grey),
                 filled: true,
                 fillColor: Colors.white, // Warna latar search bar
                 border: OutlineInputBorder(
@@ -309,12 +330,14 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
                   borderSide: BorderSide.none,
                 ),
               ),
-              style: const TextStyle(color: Colors.grey),
+              style: GoogleFonts.poppins(
+                textStyle: TextStyle(color: Colors.grey),
+              ),
             ),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.grey),
+              icon: const Icon(CupertinoIcons.refresh, color: Colors.grey),
               onPressed: () => _loadQuotations(isRefreshing: true),
             ),
           ],
@@ -352,7 +375,13 @@ class _SaleOrderListScreenState extends State<SaleOrderListScreen> {
             ),
           );
         },
-        child: const Icon(Icons.add),
+        shape: const CircleBorder(), // Membuat tombol bulat sempurna
+        backgroundColor: Colors.grey[300], // Ganti warna sesuai kebutuhan
+        child: const Icon(
+          CupertinoIcons.add,
+          size: 30, // Sesuaikan ukuran ikon jika diperlukan
+          color: Colors.blue, // Sesuaikan warna ikon jika diperlukan
+        ),
       ),
     );
   }

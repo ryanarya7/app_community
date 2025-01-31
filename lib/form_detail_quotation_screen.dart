@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:intl/intl.dart';
+import 'currency_helper.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 import 'odoo_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 class FormDetailQuotation extends StatefulWidget {
   final OdooService odooService;
   final Map<String, dynamic> headerData;
 
   const FormDetailQuotation({
-    Key? key,
+    super.key,
     required this.odooService,
     required this.headerData,
-  }) : super(key: key);
+  });
 
   @override
   _FormDetailQuotationState createState() => _FormDetailQuotationState();
@@ -22,8 +24,8 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
   List<Map<String, dynamic>> products = [];
   List<Map<String, dynamic>> filteredProducts = []; // Produk yang difilter
   List<Map<String, dynamic>> quotationLines = [];
-  final TextEditingController _searchController =
-      TextEditingController(); // Controller untuk search bar
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -80,7 +82,7 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
         quotationLines.add({
           'product_id': product['id'],
           'product_template_id': product['id'],
-          'name': '${product['default_code']} ${product['name']}',
+          'name': '${product['display_name']}',
           'product_uom_qty': 1,
           'product_uom': product['uom_id'][0],
           'price_unit': product['list_price'],
@@ -111,12 +113,6 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
     });
   }
 
-  void _updatePriceUnit(int index, String newPrice) {
-    setState(() {
-      quotationLines[index]['price_unit'] =
-          double.tryParse(newPrice) ?? quotationLines[index]['price_unit'];
-    });
-  }
 
   void _removeLine(int index) {
     setState(() {
@@ -142,7 +138,11 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
       Navigator.pushNamed(
         context,
         '/quotationDetail',
-        arguments: widget.headerData['quotationId'],
+        arguments: {
+          'odooService':
+              widget.odooService,
+          'quotationId': widget.headerData['quotationId'],
+        },
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -151,27 +151,37 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
     }
   }
 
-  final currencyFormatter = NumberFormat.currency(
-    locale: 'id_ID', // Format Indonesia
-    symbol: 'Rp ', // Simbol Rupiah
-    decimalDigits: 2,
-  );
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: TextField(
           controller: _searchController,
+          focusNode: _searchFocusNode,
           decoration: InputDecoration(
-            hintText: "Search products...",
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
+            hintText: "Search Products",
+            prefixIcon: const Icon(CupertinoIcons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: _searchFocusNode.hasFocus ? Colors.black : Colors.grey,
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(
+                color: Colors.black, // Warna border saat dipilih
+                width: 1.5,
+              ),
+            ),
           ),
-          style: const TextStyle(color: Colors.black),
-          cursorColor: Colors.black,
+          style: GoogleFonts.poppins(
+            textStyle: TextStyle(color: Colors.grey),
+          ),
+          cursorColor: Colors.grey,
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -187,7 +197,7 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                     child: ListTile(
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(
-                            8), // Membulatkan sudut gambar
+                            30), // Membulatkan sudut gambar
                         child: productImageBase64 != null &&
                                 productImageBase64 is String
                             ? Image.memory(
@@ -209,18 +219,24 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                               ),
                       ),
                       title: Text(
-                        "[${product['default_code']}] ${product['name']}",
-                        style: const TextStyle(
-                          fontSize: 12,
+                        "${product['display_name']}",
+                        style: GoogleFonts.lato(
+                          textStyle: TextStyle(
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                       subtitle: Text(
-                          "${currencyFormatter.format(product['list_price'])} | Available: ${product['qty_available']}",
-                          style: const TextStyle(
+                        "${CurrencyHelper().currencyFormatter.format(product['list_price'])} | Available: ${product['qty_available']}",
+                        style: GoogleFonts.poppins(
+                          textStyle: TextStyle(
                             fontSize: 12,
-                          )),
+                          ),
+                        ),
+                      ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.add, color: Colors.blue),
+                        icon: const Icon(CupertinoIcons.add,
+                            color: Colors.blue, size: 15),
                         onPressed: () => _addProductLine(product),
                       ),
                     ),
@@ -230,11 +246,15 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
             ),
             const Divider(height: 5),
 
-            const Text("Order Lines",
-                style: TextStyle(
+            Text(
+              "Order Lines",
+              style: GoogleFonts.poppins(
+                textStyle: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                )),
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
 
             Expanded(
@@ -254,9 +274,11 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                           // Nama produk di bagian atas
                           Text(
                             line['name'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                            style: GoogleFonts.poppins(
+                              textStyle: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             textAlign: TextAlign.left,
                           ),
@@ -298,16 +320,22 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.center,
                                     children: [
-                                      const Text(
-                                        "Rp ",
-                                        style: TextStyle(fontSize: 12),
+                                      Text(
+                                        CurrencyHelper()
+                                            .currencyFormatter
+                                            .currencySymbol,
+                                        style: GoogleFonts.poppins(
+                                          textStyle: TextStyle(fontSize: 12),
+                                        ),
                                       ),
                                       SizedBox(
                                         width: 80,
                                         child: TextField(
                                           controller: line['price_controller'],
                                           keyboardType: TextInputType.number,
-                                          style: const TextStyle(fontSize: 12),
+                                          style: GoogleFonts.poppins(
+                                            textStyle: TextStyle(fontSize: 12),
+                                          ),
                                           onChanged: (value) {
                                             setState(() {
                                               // Jika kolom kosong, atur teks menjadi "0"
@@ -362,10 +390,11 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                                   // Tombol (-)
                                   IconButton(
                                     icon: Icon(
-                                      Icons.remove_circle,
+                                      CupertinoIcons.minus_circle,
                                       color: (line['product_uom_qty'] ?? 0) > 0
                                           ? Colors.red
                                           : Colors.grey,
+                                      size: 15,
                                     ),
                                     onPressed:
                                         (line['product_uom_qty'] ?? 0) > 0
@@ -382,8 +411,10 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                                       ),
                                       keyboardType: TextInputType.number,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 12,
+                                      style: GoogleFonts.poppins(
+                                        textStyle: TextStyle(
+                                          fontSize: 12,
+                                        ),
                                       ),
                                       decoration: const InputDecoration(
                                         border: InputBorder.none,
@@ -410,11 +441,12 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                                   // Tombol (+)
                                   IconButton(
                                     icon: Icon(
-                                      Icons.add_circle,
+                                      CupertinoIcons.add_circled,
                                       color: (line['product_uom_qty'] ?? 0) <
                                               (line['qty_available'] ?? 0)
                                           ? Colors.green
                                           : Colors.grey,
+                                      size: 15,
                                     ),
                                     onPressed: (line['product_uom_qty'] ?? 0) <
                                             (line['qty_available'] ?? 0)
@@ -423,8 +455,10 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
                                   ),
                                   // Tombol Delete
                                   IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red),
+                                    icon: const Icon(
+                                        CupertinoIcons.trash_circle,
+                                        color: Colors.red,
+                                        size: 15),
                                     onPressed: () => _removeLine(index),
                                   ),
                                 ],
@@ -443,8 +477,12 @@ class _FormDetailQuotationState extends State<FormDetailQuotation> {
               child: ElevatedButton(
                 onPressed: _saveQuotationLines,
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                child: const Text("Save Quotation Lines",
-                    style: TextStyle(color: Colors.white, fontSize: 12)),
+                child: Text(
+                  "Save Quotation Lines",
+                  style: GoogleFonts.poppins(
+                    textStyle: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
               ),
             ),
           ],

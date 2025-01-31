@@ -5,8 +5,7 @@ import 'navigation_screen.dart';
 import 'odoo_service.dart';
 import 'quotation_detail_screen.dart';
 import 'sale_order_list_screen.dart';
-// import 'form_collection_screen.dart';
-import 'detail_collection_screen.dart';
+// import 'currency_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,32 +17,57 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final odooService = OdooService('https://jlm17.alphasoft.co.id/');
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Odoo Flutter Integration',
-      theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/login',
-      routes: {
-        '/login': (context) => LoginScreen(odooService: odooService),
-        '/home': (context) => NavigationScreen(odooService: odooService),
-        '/formDetail': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
-          return FormDetailQuotation(
-              odooService: odooService, headerData: args);
-        },
-        '/saleOrderList': (context) =>
-            SaleOrderListScreen(odooService: odooService),
-        '/quotationDetail': (context) => QuotationDetailScreen(
-              odooService: odooService,
-              quotationId: ModalRoute.of(context)!.settings.arguments as int,
-            ),
-        // '/formCollection': (context) => FormCollectionScreen(odooService: odooService),
-        '/collectionDetail': (context) => DetailCollectionScreen(
-              odooService: odooService,
-            ),
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/login':
+            return MaterialPageRoute(builder: (context) => const LoginScreen());
+
+          case '/home':
+            final args = settings.arguments as Map<String, dynamic>;
+            final OdooService odooService = args['odooService'];
+            final int initialIndex =
+                args['initialIndex'] ?? 0; // Ambil index dari args
+
+            return MaterialPageRoute(
+              builder: (context) => NavigationScreen(
+                odooService: odooService,
+                initialIndex:
+                    initialIndex, // Kirim nilai index ke NavigationScreen
+              ),
+            );
+
+          case '/formDetail':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) => FormDetailQuotation(
+                odooService: args['odooService'],
+                headerData: args['headerData'],
+              ),
+            );
+
+          case '/saleOrderList':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) =>
+                  SaleOrderListScreen(odooService: args['odooService']),
+            );
+
+          case '/quotationDetail':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) => QuotationDetailScreen(
+                odooService: args['odooService'],
+                quotationId: args['quotationId'],
+              ),
+            );
+
+          default:
+            return MaterialPageRoute(builder: (context) => const LoginScreen());
+        }
       },
     );
   }

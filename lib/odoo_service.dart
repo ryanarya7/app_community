@@ -14,30 +14,31 @@ class OdooService {
     await _storage.write(key: _sessionKey, value: jsonEncode(session.toJson()));
   }
 
-  static Future<OdooSession?> restoreSession() async {
-    try {
-      final sessionData =
-          await const FlutterSecureStorage().read(key: _sessionKey);
-      if (sessionData == null) return null;
-      final session = OdooSession.fromJson(jsonDecode(sessionData));
-      final client = OdooClient('https://jlm17.alphasoft.co.id/', session);
-      try {
-        await client.checkSession();
-        return session;
-      } on OdooSessionExpiredException {
-        print('Session expired');
-        return null;
-      }
-    } catch (e) {
-      print('Failed to restore session: $e');
-      return null;
-    }
-  }
+  // static Future<OdooSession?> restoreSession() async {
+  //   try {
+  //     final sessionData =
+  //         await const FlutterSecureStorage().read(key: _sessionKey);
+  //     if (sessionData == null) return null;
+  //     final session = OdooSession.fromJson(jsonDecode(sessionData));
+  //     final client = OdooClient('https://jlm17.alphasoft.co.id/', session);
+  //     try {
+  //       await client.checkSession();
+  //       return session;
+  //     } on OdooSessionExpiredException {
+  //       print('Session expired');
+  //       return null;
+  //     }
+  //   } catch (e) {
+  //     print('Failed to restore session: $e');
+  //     return null;
+  //   }
+  // }
 
   Future<void> login(String database, String username, String password) async {
     try {
       await _client.authenticate(database, username, password);
       currentUsername = username; // Simpan username untuk keperluan lainnya
+      await _storeSession(_client.sessionId!);
     } on OdooException catch (e) {
       throw Exception('Login failed: $e');
     }
@@ -72,6 +73,7 @@ class OdooService {
           'fields': [
             'id',
             'name',
+            'display_name',
             'list_price',
             'image_1920',
             'qty_available',
@@ -368,7 +370,7 @@ class OdooService {
 
       // Gabungkan domain pencarian
       List<dynamic> domain = [
-        ['user_member_id', '=', userId] // Filter berdasarkan user_id
+        ['user_id', '=', userId] // Filter berdasarkan user_id
       ];
 
       if (searchQuery.isNotEmpty) {
@@ -395,7 +397,7 @@ class OdooService {
             'date_order',
             'amount_total',
             'state',
-            'user_member_id',
+            'user_id',
           ],
           'limit': limit,
           'offset': offset,
@@ -430,13 +432,13 @@ class OdooService {
             'user_id',
             'order_line', // Order Lines
             'payment_term_id',
-            'vat',
+            // 'vat',
             'warehouse_id',
             'date_order', // Quotation Date
             'amount_total',
             'amount_untaxed', // Untaxed Amount
             'state',
-            'user_member_id'
+            'user_id'
           ],
           'limit': 1, // Fetch only one record
         },
@@ -1026,6 +1028,61 @@ class OdooService {
       });
     } catch (e) {
       throw Exception('Failed to delete order line: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchCurrencyInfo() async {
+    await checkSession();
+    try {
+      final response = await _client.callKw({
+        'model': 'res.currency',
+        'method': 'search_read',
+        'args': [],
+        'kwargs': {
+          'fields': ['symbol', 'name', 'position'],
+          'limit': 1, // Ambil currency pertama (default)
+        },
+      });
+
+      if (response.isNotEmpty) {
+        final currency = response[0];
+        return {
+          'symbol': currency['symbol'] ?? '',
+          'locale': currency['name'] ?? 'en_US',
+          'position': currency['position'] ?? 'after',
+        };
+      } else {
+        throw Exception('Currency information not found.');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch currency info: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchProductById(int productId) async {
+    await checkSession();
+    try {
+      final response = await _client.callKw({
+        'model': 'product.product',
+        'method': 'search_read',
+        'args': [
+          [
+            ['id', '=', productId]
+          ]
+        ],
+        'kwargs': {
+          'fields': ['image_1920'],
+          'limit': 1,
+        },
+      });
+
+      if (response.isEmpty) {
+        throw Exception('Product not found with ID: $productId');
+      }
+
+      return Map<String, dynamic>.from(response[0]);
+    } catch (e) {
+      throw Exception('Failed to fetch product by ID: $e');
     }
   }
 }
